@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Authors: 
+# Authors:
 #     Enrico Saccon     enrico.saccon [at] unitn.it
 #     Placido Falqueto  placido.falqueto [at] unitn.it
 
@@ -25,7 +25,7 @@ def print_env(context):
 
 def generate_launch_description():
     # launch.logging.launch_config.level = logging.DEBUG
-    
+
     map_env_pkg = get_package_share_directory('map_pkg')
 
     map_env_params_file_path = os.path.join(map_env_pkg, 'config', 'map_config.yaml')
@@ -34,6 +34,7 @@ def generate_launch_description():
 
     # General arguments
     map_env_params_file = LaunchConfiguration('map_env_params_file', default=map_env_params_file_path)
+    use_gui = LaunchConfiguration('use_gui', default='true')
 
     # Declare LaunchArguments for exposing launching arguments
     launch_args = [
@@ -41,6 +42,12 @@ def generate_launch_description():
             'map_env_params_file',
             default_value=map_env_params_file_path,
             description='Full path to the map_pkg params file to use'
+        ),
+        DeclareLaunchArgument(
+            'use_gui',
+            default_value=use_gui,
+            choices=['true', 'false'],
+            description='Flag to enable gazebo visualization'
         ),
     ]
 
@@ -51,28 +58,28 @@ def generate_launch_description():
             executable='send_gates',
             name='send_gates',
             output='screen',
-            parameters=[map_env_params_file]
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
         Node (
             package='map_pkg',
             executable='send_obstacles',
             name='send_obstacles',
             output='screen',
-            parameters=[map_env_params_file]
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
         Node (
             package='map_pkg',
             executable='send_borders',
             name='send_borders',
             output='screen',
-            parameters=[map_env_params_file]
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
         Node (
             package='map_pkg',
             executable='send_victims',
             name='send_victims',
             output='screen',
-            parameters=[map_env_params_file]
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
     ]
 
@@ -83,7 +90,7 @@ def generate_launch_description():
         ld.add_action(launch_arg)
 
     ld.add_action(OpaqueFunction(function=print_env))
-    
+
     for node in nodes:
         ld.add_action(node)
 

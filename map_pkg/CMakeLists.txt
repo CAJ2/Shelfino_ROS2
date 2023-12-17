@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(obstacles_msgs REQUIRED)
 find_package(gazebo_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 install(DIRECTORY launch models config
   DESTINATION share/${PROJECT_NAME}
@@ -42,19 +43,20 @@ ament_target_dependencies(
   "rclcpp"
   "gazebo_msgs"
   "obstacles_msgs"
+  "visualization_msgs"
 )
 
 
 # build nodes
 foreach(NODE ${NODES})
   add_executable(${NODE} src/${NODE}.cpp src/utilities.cpp src/spawn_model.cpp)
-  
+
   target_include_directories(${NODE} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
   target_compile_features(${NODE} PUBLIC c_std_99 cxx_std_17)
-  
+
   # target_link_libraries(${NODE} ${PROJECT_NAME}_lib)
 
   ament_target_dependencies(
@@ -63,6 +65,7 @@ foreach(NODE ${NODES})
     "rclcpp"
     "gazebo_msgs"
     "obstacles_msgs"
+    "visualization_msgs"
   )
 
   install(TARGETS ${NODE}
@@ -73,7 +76,7 @@ endforeach()
 # Tests
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  
+
   ament_add_gtest(${PROJECT_NAME}_tests test/utilities_test.cpp)
 
   target_include_directories(${PROJECT_NAME}_tests PUBLIC
@@ -87,8 +90,9 @@ if(BUILD_TESTING)
     "std_msgs"
     "gazebo_msgs"
     "obstacles_msgs"
+    "visualization_msgs"
   )
-  
+
   target_link_libraries(${PROJECT_NAME}_tests ${PROJECT_NAME}_lib)
 endif()
 
