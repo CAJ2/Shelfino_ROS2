@@ -6,12 +6,18 @@ void spawn_model(
       std::string xml, geometry_msgs::msg::Pose pose, std::string node_namespace)
 {
   RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Waiting for service spawn_entity...");
+  int retry_count = 0;
   while(!spawner_->wait_for_service(std::chrono::milliseconds(100))){
     if (!rclcpp::ok()){
       RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
       rclcpp::shutdown(nullptr, "Interrupted while waiting for the service. Exiting.");
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    // RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+    retry_count++;
+    if (retry_count > 50) {
+      RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Service spawn_entity is unavailable.");
+      return;
+    }
   }
 
   // Configure request

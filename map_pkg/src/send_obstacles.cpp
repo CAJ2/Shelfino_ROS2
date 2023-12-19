@@ -16,6 +16,8 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "std_msgs/msg/header.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include "gazebo_msgs/srv/spawn_entity.hpp"
 
@@ -28,6 +30,7 @@ class ObstaclesPublisher : public rclcpp::Node
 {
 private:
   rclcpp::Publisher<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisherm_;
   rclcpp::Client<gazebo_msgs::srv::SpawnEntity>::SharedPtr spawner_;
   std::string node_namespace;
   std::string share_dir;
@@ -51,9 +54,11 @@ public:
     this->declare_parameter("min_size", 0.5);
     this->declare_parameter("max_size", 1.5);
 
+    this->declare_parameter<bool>("use_gui", true);
+
     // Print parameters values
     RCLCPP_INFO(this->get_logger(), "Parameters:");
-    
+
     RCLCPP_INFO(this->get_logger(), "map: %s", this->get_parameter("map").as_string().c_str());
     RCLCPP_INFO(this->get_logger(), "dx: %f", this->get_parameter("dx").as_double());
     RCLCPP_INFO(this->get_logger(), "dy: %f", this->get_parameter("dy").as_double());
@@ -78,6 +83,7 @@ public:
 
     this->spawner_ = this->create_client<gazebo_msgs::srv::SpawnEntity>("/spawn_entity");
     this->publisher_ = this->create_publisher<obstacles_msgs::msg::ObstacleArrayMsg>("/obstacles", qos);
+    publisherm_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/obstacles", qos);
 
     std::vector<obstacle> obstacles;
 
@@ -90,14 +96,14 @@ public:
     double dy = this->get_parameter("dy").as_double();
     int max_timeout = this->get_parameter("max_timeout").as_int();
     int n_obstacles = this->get_parameter("n_obstacles").as_int();
-    
+
     // Define a random number generator for doubles
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> size_dis(
-      this->get_parameter("min_size").as_double(), 
+      this->get_parameter("min_size").as_double(),
       this->get_parameter("max_size").as_double()
-    ); 
+    );
     std::uniform_real_distribution<> x_dis(-dx, dx);
     std::uniform_real_distribution<> y_dis(-dy, dy);
     std::uniform_int_distribution<> shape(0, 2);
@@ -108,10 +114,10 @@ public:
 
       if (this->get_parameter("no_cylinders").as_bool()) {
         rand_box(obs, obstacles, map, dx, dy, startTime, max_timeout, gen);
-      } 
+      }
       else if (this->get_parameter("no_boxes").as_bool()) {
         rand_cylinder(obs, obstacles, map, dx, dy, startTime, max_timeout, gen);
-      } 
+      }
       else {
         obstacle_type type = shape(gen) == 0 ? obstacle_type::CYLINDER : obstacle_type::BOX;
         RCLCPP_INFO(this->get_logger(), "Obstacle type: %s", (type==obstacle_type::BOX ? "box" : "cylinder"));
@@ -122,12 +128,12 @@ public:
           rand_box(obs, obstacles, map, dx, dy, startTime, max_timeout, gen);
         }
       }
-      RCLCPP_INFO(this->get_logger(), "Obstacle %d: x=%f, y=%f, radius=%f, dx=%f, dy=%f", 
+      RCLCPP_INFO(this->get_logger(), "Obstacle %d: x=%f, y=%f, radius=%f, dx=%f, dy=%f",
         i, obs.x, obs.y, obs.radius, obs.dx, obs.dy);
     }
 
     if (overTime(this->get_clock(), startTime, max_timeout)) {
-      RCLCPP_INFO(this->get_logger(), "Could not find a valid position for some obstacles [%ld/%d]", obstacles.size(), n_obstacles); 
+      RCLCPP_INFO(this->get_logger(), "Could not find a valid position for some obstacles [%ld/%d]", obstacles.size(), n_obstacles);
     }
 
     obstacles_msgs::msg::ObstacleArrayMsg msg;
@@ -135,8 +141,10 @@ public:
     hh.stamp = this->get_clock()->now();
     hh.frame_id = "map";
 
+    visualization_msgs::msg::MarkerArray marks;
+    int obs_id = 0;
     for (auto o : obstacles) {
-      RCLCPP_INFO(this->get_logger(), "Publishing obstacle: %s x=%f, y=%f, radius=%f, dx=%f, dy=%f", 
+      RCLCPP_INFO(this->get_logger(), "Publishing obstacle: %s x=%f, y=%f, radius=%f, dx=%f, dy=%f",
         (o.type==obstacle_type::BOX ? "box" : "cylinder"), o.x, o.y, o.radius, o.dx, o.dy);
 
       obstacles_msgs::msg::ObstacleMsg obs;
@@ -188,7 +196,7 @@ public:
           pos += size_replace_string.length();
         }
       }
-      else { 
+      else {
         // Read XML file to string
         std::ifstream xml_file(this->share_dir + "/models/cylinder/model.sdf");
         xml_string.assign(
@@ -214,12 +222,39 @@ public:
       pose.orientation.z = 0;
       pose.orientation.w = 0;
 
-      spawn_model(this->get_node_base_interface(), this->spawner_, xml_string, pose);
+      if (this->get_parameter("use_gui").as_bool()) {
+        spawn_model(this->get_node_base_interface(), this->spawner_, xml_string, pose);
+      }
+
+      // Publish markers
+      visualization_msgs::msg::Marker mark;
+      mark.header = hh;
+      mark.ns = "obstacles";
+      mark.id = obs_id;
+      obs_id++;
+      mark.action = visualization_msgs::msg::Marker::ADD;
+      if (o.type == obstacle_type::BOX) {
+        mark.type = visualization_msgs::msg::Marker::CUBE;
+        mark.scale.x = o.dx;
+        mark.scale.y = o.dy;
+      } else {
+        mark.type = visualization_msgs::msg::Marker::CYLINDER;
+        mark.scale.x = o.radius;
+        mark.scale.y = o.radius;
+      }
+      mark.pose = pose;
+      mark.scale.z = 1.0;
+      mark.color.a = 1.0;
+      mark.color.r = 0.0;
+      mark.color.g = 1.0;
+      mark.color.b = 0.0;
+      marks.markers.push_back(mark);
 
       sleep(0.5);
     }
 
     this->publisher_->publish(msg);
+    this->publisherm_->publish(marks);
   }
 private:
   void rand_cylinder(obstacle& obs, std::vector<obstacle>& obstacles, std::string map, double dx, double dy, rclcpp::Time& startTime, int max_timeout, std::mt19937& gen);
@@ -229,7 +264,7 @@ private:
 
 void ObstaclesPublisher::rand_cylinder(obstacle& obs, std::vector<obstacle>& obstacles, std::string map, double dx, double dy, rclcpp::Time& startTime, int max_timeout, std::mt19937& gen){
   std::uniform_real_distribution<> size_dis(
-    this->get_parameter("min_size").as_double(), 
+    this->get_parameter("min_size").as_double(),
     this->get_parameter("max_size").as_double()
   );
   std::uniform_real_distribution<> x_dis(-dx, dx);
@@ -249,19 +284,19 @@ void ObstaclesPublisher::rand_cylinder(obstacle& obs, std::vector<obstacle>& obs
 
 void ObstaclesPublisher::rand_box(obstacle& obs, std::vector<obstacle>& obstacles, std::string map, double dx, double dy, rclcpp::Time& startTime, int max_timeout, std::mt19937& gen){
   std::uniform_real_distribution<> size_dis(
-    this->get_parameter("min_size").as_double(), 
+    this->get_parameter("min_size").as_double(),
     this->get_parameter("max_size").as_double()
   );
   std::uniform_real_distribution<> x_dis(-dx, dx);
   std::uniform_real_distribution<> y_dis(-dy, dy);
 
   obs.type = obstacle_type::BOX;
-  do {    
+  do {
     obs.dx = size_dis(gen);
     obs.dy = size_dis(gen);
     obs.x = x_dis(gen);
     obs.y = y_dis(gen);
-    
+
     if (!overlaps(obs, obstacles) && is_inside_map(obs, map, dx, dy)){
       obstacles.push_back(obs);
       break;
@@ -280,4 +315,3 @@ int main(int argc, char * argv[])
   rclcpp::shutdown();
   return 0;
 }
-
