@@ -4,18 +4,22 @@
 #     Enrico Saccon     enrico.saccon [at] unitn.it
 #     Placido Falqueto  placido.falqueto [at] unitn.it
 
+import logging
 import os
 from pathlib import Path
 
+import launch.logging
 from ament_index_python.packages import get_package_share_directory
-from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch.actions import OpaqueFunction, DeclareLaunchArgument, IncludeLaunchDescription
 from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
-import launch.logging
-import logging
 
 def print_env(context):
     print(__file__)
@@ -23,14 +27,19 @@ def print_env(context):
         print("\t", key, context.launch_configurations[key])
     return
 
+
 def generate_launch_description():
     # launch.logging.launch_config.level = logging.DEBUG
 
-    map_env_pkg = get_package_share_directory('map_pkg')
+    map_env_pkg = get_package_share_directory("map_pkg")
 
-    map_env_params_file_path = os.path.join(map_env_pkg, 'config', 'map_config.yaml')
-    if (not os.path.exists(map_env_params_file_path)):
-        raise Exception("[{}] Map config file `{}` does not exist".format(__file__, map_env_params_file_path))
+    map_env_params_file_path = os.path.join(map_env_pkg, "config", "map_config.yaml")
+    if not os.path.exists(map_env_params_file_path):
+        raise Exception(
+            "[{}] Map config file `{}` does not exist".format(
+                __file__, map_env_params_file_path
+            )
+        )
 
     # General arguments
     map_env_params_file = LaunchConfiguration('map_env_params_file', default=map_env_params_file_path)
@@ -39,9 +48,9 @@ def generate_launch_description():
     # Declare LaunchArguments for exposing launching arguments
     launch_args = [
         DeclareLaunchArgument(
-            'map_env_params_file',
+            "map_env_params_file",
             default_value=map_env_params_file_path,
-            description='Full path to the map_pkg params file to use'
+            description="Full path to the map_pkg params file to use",
         ),
         DeclareLaunchArgument(
             'use_gui',
@@ -53,13 +62,6 @@ def generate_launch_description():
 
     # List of nodes to launch
     nodes = [
-        Node (
-            package='map_pkg',
-            executable='send_initialposes',
-            name='send_initialposes',
-            output='screen',
-            parameters=[map_env_params_file]
-        ),
         Node (
             package='map_pkg',
             executable='send_gates',

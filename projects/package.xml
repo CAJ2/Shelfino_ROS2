@@ -5,9 +5,9 @@
   <version>1.0.0</version>
   <description>
     Package containing the launch files for the different tasks:
-    - Multi-agent path finding: mapf.launch.py 
-    - Victims rescue: victims.launch.py 
-    - Purseur evader: pv.launch.py 
+    - Multi-agent path finding: mapf.launch.py
+    - Victims rescue: victims.launch.py
+    - Purseur evader: pv.launch.py
   </description>
   <maintainer email="enrico.saccon@unitn.it">enrico</maintainer>
   <maintainer email="placido.falqueto@unitn.it">placido</maintainer>
@@ -19,6 +19,7 @@
   <depend>shelfino_description</depend>
   <depend>shelfino_navigation</depend>
   <!-- <depend>evader</depend> -->
+  <depend>map_pkg</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

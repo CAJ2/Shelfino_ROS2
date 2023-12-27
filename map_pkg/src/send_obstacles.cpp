@@ -69,11 +69,6 @@ public:
     RCLCPP_INFO(this->get_logger(), "min_size: %f", this->get_parameter("min_size").as_double());
     RCLCPP_INFO(this->get_logger(), "max_size: %f", this->get_parameter("max_size").as_double());
 
-    if (this->get_parameter("n_obstacles").as_int() == 0) {
-      RCLCPP_INFO(this->get_logger(), "Number of requested obstacles is 0, exiting");
-      exit(0);
-    }
-
     if (this->get_parameter("no_cylinders").as_bool() && this->get_parameter("no_boxes").as_bool()) {
       RCLCPP_ERROR(this->get_logger(), "Both no_cylinders and no_boxes are true. At least one of them must be false.");
       exit(1);
@@ -83,7 +78,7 @@ public:
 
     this->spawner_ = this->create_client<gazebo_msgs::srv::SpawnEntity>("/spawn_entity");
     this->publisher_ = this->create_publisher<obstacles_msgs::msg::ObstacleArrayMsg>("/obstacles", qos);
-    publisherm_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/obstacles", qos);
+    this->publisherm_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/obstacles", qos);
 
     std::vector<obstacle> obstacles;
 
@@ -302,7 +297,7 @@ void ObstaclesPublisher::rand_box(obstacle& obs, std::vector<obstacle>& obstacle
       break;
     }
   } while(!overTime(this->get_clock(), startTime, max_timeout));
-  RCLCPP_INFO(this->get_logger(), "Obstacle: x=%f, y=%f, dx=%f, dy=%f, intersections: %d, time: %f, max_time: %d, inside_map: %s", 
+  RCLCPP_INFO(this->get_logger(), "Obstacle: x=%f, y=%f, dx=%f, dy=%f, intersections: %d, time: %f, max_time: %d, inside_map: %s",
     obs.x, obs.y, obs.dx, obs.dy, (bool)overlaps(obs, obstacles), (this->get_clock()->now().seconds()-startTime.seconds()), max_timeout, (is_inside_map(obs, map, dx, dy) ? std::string("true").c_str() : std::string("false").c_str()));
 }
 

@@ -29,16 +29,16 @@ def check_map(context):
     world_name = Path(context.launch_configurations['gazebo_world_file'])
     if map_name.stem != world_name.stem:
         raise Exception("[{}] Map `{}` does not match world `{}`".format(__file__, map_name.stem, world_name.stem))
-    return 
+    return
 
 def get_map_name(context):
     map_name = Path(context.launch_configurations['map_file']).stem
     context.launch_configurations['map_name'] = map_name
-    return 
+    return
 
 def generate_launch_description():
     # launch.logging.launch_config.level = logging.DEBUG
-    
+
     shelfino_desc_pkg  = get_package_share_directory('shelfino_description')
     shelfino_nav2_pkg  = get_package_share_directory('shelfino_navigation')
     shelfino_gaze_pkg  = get_package_share_directory('shelfino_gazebo')
@@ -186,13 +186,13 @@ def generate_launch_description():
                 'rviz_config_file': nav2_rviz_config_file,
             }.items()
         ),
-        Node (
-            package='evader',
-            executable='evader',
-            name='evader_node',
-            namespace=shelfino_name,
-            output='screen'
-        ),
+        #Node (
+        #    package='evader',
+        #    executable='evader',
+        #    name='evader_node',
+        #    namespace=shelfino_name,
+        #    output='screen'
+        #),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 os.path.join(map_env_pkg, 'launch'),
@@ -213,7 +213,7 @@ def generate_launch_description():
     ld.add_action(OpaqueFunction(function=check_map))
     ld.add_action(OpaqueFunction(function=get_map_name))
     ld.add_action(OpaqueFunction(function=print_env))
-    
+
     ld.add_action(mpdp_node)
     for node in nodes:
         ld.add_action(node)

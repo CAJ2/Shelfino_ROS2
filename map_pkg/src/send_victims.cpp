@@ -158,7 +158,7 @@ public:
       pose.orientation.w = 0;
 
       if (this->get_parameter("use_gui").as_bool()) {
-        spawn_model(this->get_node_base_interface(), this->spawner_, xml_string, pose);
+        spawn_model(this->get_node_base_interface(), this->spawner_, xml_string, pose, "victim");
       }
 
       // Publish markers
