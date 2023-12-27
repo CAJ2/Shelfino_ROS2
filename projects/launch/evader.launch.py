@@ -29,16 +29,16 @@ def check_map(context):
     world_name = Path(context.launch_configurations['gazebo_world_file'])
     if map_name.stem != world_name.stem:
         raise Exception("[{}] Map `{}` does not match world `{}`".format(__file__, map_name.stem, world_name.stem))
-    return 
+    return
 
 def get_map_name(context):
     map_name = Path(context.launch_configurations['map_file']).stem
     context.launch_configurations['map_name'] = map_name
-    return 
+    return
 
 def generate_launch_description():
     # launch.logging.launch_config.level = logging.DEBUG
-    
+
     shelfino_desc_pkg  = get_package_share_directory('shelfino_description')
     shelfino_nav2_pkg  = get_package_share_directory('shelfino_navigation')
     shelfino_gaze_pkg  = get_package_share_directory('shelfino_gazebo')
@@ -53,7 +53,7 @@ def generate_launch_description():
 
     # Gazebo simulation arguments
     use_gui           = LaunchConfiguration('use_gui', default='true')
-    use_rviz          = LaunchConfiguration('use_rviz', default='true')
+    use_rviz          = LaunchConfiguration('use_rviz', default='false')
     rviz_config_file  = LaunchConfiguration('rviz_config_file', default=os.path.join(shelfino_desc_pkg, 'rviz', 'shelfino.rviz'))
     gazebo_world_file = LaunchConfiguration('gazebo_world_file', default=os.path.join(shelfino_gaze_pkg, 'worlds', 'hexagon.world'))
     robot_model_file  = LaunchConfiguration('robot_model_file', default=os.path.join(shelfino_desc_pkg, 'models', 'shelfino', 'model.sdf.xacro'))
@@ -145,6 +145,7 @@ def generate_launch_description():
         convert_types=True
     )
 
+
     # List of nodes to launch
     nodes = [
         IncludeLaunchDescription(
@@ -212,7 +213,8 @@ def generate_launch_description():
     ld.add_action(OpaqueFunction(function=check_map))
     ld.add_action(OpaqueFunction(function=get_map_name))
     ld.add_action(OpaqueFunction(function=print_env))
-    
+
+    ld.add_action(mpdp_node)
     for node in nodes:
         ld.add_action(node)
 

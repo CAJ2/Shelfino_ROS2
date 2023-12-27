@@ -29,20 +29,20 @@ def check_map(context):
     # world_name = Path(context.launch_configurations['gazebo_world_file'])
     # if map_name.stem != world_name.stem:
     #     raise Exception("[{}] Map `{}` does not match world `{}`".format(__file__, map_name.stem, world_name.stem))
-    return 
+    return
 
 def get_map_name(context):
     map_name = Path(context.launch_configurations['map_file']).stem
     context.launch_configurations['map_name'] = map_name
-    return 
+    return
 
 def evaluate_rviz(context, *args, **kwargs):
     shelfino_nav2_pkg = get_package_share_directory('shelfino_navigation')
-    
+
     rviz_path = context.launch_configurations['nav2_rviz_config_file']
     cr_path = os.path.join(shelfino_nav2_pkg, 'rviz', 'shelfino') + \
         'evacuation_'+context.launch_configurations['n_shelfini']+'_nav.rviz'
-    
+
     output_config = {}
     with open(rviz_path, 'r') as f_in:
         rviz_config= yaml.load(f_in, Loader=yaml.FullLoader)
@@ -88,13 +88,13 @@ def evaluate_rviz(context, *args, **kwargs):
             yaml.dump(output_config, f_out, default_flow_style=False)
 
     context.launch_configurations['rviz_config_file'] = cr_path
-    
+
     return
-    
+
 
 def generate_launch_description():
     # launch.logging.launch_config.level = logging.DEBUG
-    
+
     shelfino_desc_pkg  = get_package_share_directory('shelfino_description')
     shelfino_nav2_pkg  = get_package_share_directory('shelfino_navigation')
     shelfino_gaze_pkg  = get_package_share_directory('shelfino_gazebo')
@@ -109,7 +109,7 @@ def generate_launch_description():
 
     # Gazebo simulation arguments
     use_gui           = LaunchConfiguration('use_gui', default='true')
-    use_rviz          = LaunchConfiguration('use_rviz', default='true')
+    use_rviz          = LaunchConfiguration('use_rviz', default='false')
     rviz_config_file  = LaunchConfiguration('rviz_config_file', default=os.path.join(shelfino_desc_pkg, 'rviz', 'shelfino.rviz'))
     gazebo_world_file = LaunchConfiguration('gazebo_world_file', default=os.path.join(shelfino_gaze_pkg, 'worlds', 'empty.world'))
 
@@ -231,9 +231,9 @@ def generate_launch_description():
     def launch_rsp(context):
         nodes = []
         for shelfino_id in range(int(context.launch_configurations['n_shelfini'])):
-            
+
             shelfino_name = PythonExpression(["'", "shelfino", str(shelfino_id), "'"])
-    
+
             rsp_node = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([
                     os.path.join(shelfino_desc_pkg, 'launch'),
@@ -247,13 +247,13 @@ def generate_launch_description():
             nodes.append(rsp_node)
 
         return nodes
-    
+
     def spawn_shelfini(context):
         nodes = []
         for shelfino_id in range(int(context.launch_configurations['n_shelfini'])):
-            
+
             shelfino_name = PythonExpression(["'", "shelfino", str(shelfino_id), "'"])
-    
+
             spawn_node = Node(
                 package='gazebo_ros',
                 executable='spawn_entity.py',
@@ -274,9 +274,9 @@ def generate_launch_description():
     def launch_navigation(context):
         nodes = []
         for shelfino_id in range(int(context.launch_configurations['n_shelfini'])):
-            
+
             shelfino_name = PythonExpression(["'", "shelfino", str(shelfino_id), "'"])
-    
+
             model_output = PythonExpression(["'", os.path.join(shelfino_desc_pkg, 'models', 'shelfino'), str(shelfino_id), ".sdf'"])
             sapf_node = GroupAction([
                 IncludeLaunchDescription(
@@ -310,7 +310,7 @@ def generate_launch_description():
     ld.add_action(OpaqueFunction(function=get_map_name))
     ld.add_action(OpaqueFunction(function=print_env))
     ld.add_action(OpaqueFunction(function=evaluate_rviz))
-    
+
     create_map_node = Node (
         package='map_pkg',
         executable='create_map_pgm.py',
@@ -321,12 +321,12 @@ def generate_launch_description():
 
     ld.add_action(gazebo_launch)
     ld.add_action(map_pkg_node)
-    
+
     ld.add_action(TimerAction(
         period='2',
         actions = [create_map_node]
     ))
-    
+
     ld.add_action(TimerAction(
         period='5',
         actions = [OpaqueFunction(function=launch_rsp)]

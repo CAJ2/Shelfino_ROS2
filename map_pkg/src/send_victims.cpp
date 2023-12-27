@@ -16,6 +16,8 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "std_msgs/msg/header.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include "gazebo_msgs/srv/spawn_entity.hpp"
 
@@ -28,6 +30,7 @@ class VictimPublisher : public rclcpp::Node
 {
 private:
   rclcpp::Publisher<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisherm_;
   rclcpp::Client<gazebo_msgs::srv::SpawnEntity>::SharedPtr spawner_;
   std::string node_namespace;
   std::string share_dir;
@@ -48,6 +51,8 @@ public:
     this->declare_parameter("n_victims", 3);
     this->declare_parameter("min_weight", 10);
     this->declare_parameter("max_weight", 500);
+
+    this->declare_parameter<bool>("use_gui", true);
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom);
 
@@ -81,6 +86,7 @@ public:
     }
 
     publisher_ = this->create_publisher<obstacles_msgs::msg::ObstacleArrayMsg>("/victims", qos);
+    publisherm_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/victims", qos);
 
     // Define a random number generator for doubles
     std::random_device rd;
@@ -113,19 +119,21 @@ public:
     hh.stamp = this->get_clock()->now();
     hh.frame_id = "map";
 
+    visualization_msgs::msg::MarkerArray marks;
+    int obs_id = 0;
     for (auto vict : victims) {
       RCLCPP_INFO(this->get_logger(), "Publishing victim at x=%f, y=%f", vict.x, vict.y);
 
       obstacles_msgs::msg::ObstacleMsg obs;
       geometry_msgs::msg::Polygon pol;
-    
+
       geometry_msgs::msg::Point32 point;
       point.x = vict.x;
       point.y = vict.y;
       point.z = 0.0;
       pol.points.push_back(point);
       obs.polygon = pol;
-      // While physically the radius of the victim won't be touched, the now 
+      // While physically the radius of the victim won't be touched, the now
       // assigned value indicates the weight of the victim
       obs.radius = weight_dis(gen);
 
@@ -148,12 +156,50 @@ public:
       pose.orientation.y = 0;
       pose.orientation.z = 0;
       pose.orientation.w = 0;
-    
-      spawn_model(this->get_node_base_interface(), this->spawner_, xml_string, pose, "victim");
+
+      if (this->get_parameter("use_gui").as_bool()) {
+        spawn_model(this->get_node_base_interface(), this->spawner_, xml_string, pose, "victim");
+      }
+
+      // Publish markers
+      visualization_msgs::msg::Marker mark;
+      mark.header = hh;
+      mark.ns = "victims";
+      mark.id = obs_id;
+      mark.action = visualization_msgs::msg::Marker::ADD;
+      mark.type = visualization_msgs::msg::Marker::CYLINDER;
+      mark.pose = pose;
+      mark.scale.x = obs.radius/max_weight;
+      mark.scale.y = obs.radius/max_weight;
+      mark.scale.z = 0.01;
+      mark.color.a = 1.0;
+      mark.color.r = 0.0;
+      mark.color.g = 0.0;
+      mark.color.b = 1.0;
+      marks.markers.push_back(mark);
+
+      visualization_msgs::msg::Marker mark2;
+      mark2.header = hh;
+      mark2.ns = "victims_value";
+      mark2.id = obs_id;
+      mark2.action = visualization_msgs::msg::Marker::ADD;
+      mark2.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+      mark2.pose = pose;
+      mark2.scale.z = 0.2;
+      mark2.color.a = 1.0;
+      mark2.color.r = 1.0;
+      mark2.color.g = 1.0;
+      mark2.color.b = 1.0;
+      mark2.text = std::to_string((int) std::round(obs.radius));
+      marks.markers.push_back(mark2);
+
+      obs_id++;
+
       sleep(0.5);
     }
 
     this->publisher_->publish(msg);
+    this->publisherm_->publish(marks);
   }
 };
 

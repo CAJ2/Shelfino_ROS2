@@ -14,6 +14,8 @@
 #include "std_msgs/msg/header.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
@@ -27,6 +29,7 @@ class GatesPublisher : public rclcpp::Node
 {
 private:
   rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisherm_;
   rclcpp::Client<gazebo_msgs::srv::SpawnEntity>::SharedPtr spawner_;
   std::string node_namespace;
   std::string share_dir;
@@ -34,7 +37,7 @@ private:
 public:
   GatesPublisher() : Node("send_gates")
   {
-    // Get share directory with ament 
+    // Get share directory with ament
     this->share_dir = ament_index_cpp::get_package_share_directory("map_pkg");
     this->node_namespace = this->get_namespace();
 
@@ -48,9 +51,12 @@ public:
     this->declare_parameter("x", 0.0);
     this->declare_parameter("y", 0.0);
 
+    this->declare_parameter<bool>("use_gui", true);
+
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom);
-    
+
     this->publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/gate_position", qos);
+    this->publisherm_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/gate_position", qos);
     this->spawner_ = this->create_client<gazebo_msgs::srv::SpawnEntity>("/spawn_entity");
 
     // Get parameters
@@ -102,7 +108,7 @@ void GatesPublisher::rand_hexagon_gate(double dx, double dy){
   do {
     obs.x = dis_x(gen);
   } while(!is_inside_map(obs, "hexagon", dx, dy));
-  
+
   this->spawn_gates(obs.x, obs.y);
 }
 
@@ -119,7 +125,7 @@ void GatesPublisher::rand_rectangle_gate(double dx, double dy){
   do {
     int edge = dis_edge(gen);
     switch (edge){
-      //Top horizontal edge 
+      //Top horizontal edge
       case 0:
         obs.x = dis_x(gen);
         obs.y = dy/2.0 - 0.5-0.0001;
@@ -144,13 +150,13 @@ void GatesPublisher::rand_rectangle_gate(double dx, double dy){
         exit(1);
     }
   } while(!is_inside_map(obs, "rectangle", dx, dy));
-  
+
   this->spawn_gates(obs.x, obs.y);
 }
 
 /**
  * @brief Publish the position of the gate in the hexagon map
- * 
+ *
  */
 void GatesPublisher::spawn_gates(double x, double y){
   std_msgs::msg::Header hh;
@@ -172,26 +178,47 @@ void GatesPublisher::spawn_gates(double x, double y){
   pose.orientation.z = 0;
   pose.orientation.w = 0;
   pose_array_temp.push_back(pose);
-  
+
   // Add gate to the message
   msg.poses = pose_array_temp;
 
   // Publish message
   publisher_->publish(msg);
 
+  // Publish markers
+  visualization_msgs::msg::MarkerArray marks;
+  visualization_msgs::msg::Marker mark;
+  mark.header = hh;
+  mark.ns = "gate";
+  mark.id = 0;
+  mark.type = visualization_msgs::msg::Marker::CUBE;
+  mark.action = visualization_msgs::msg::Marker::ADD;
+  mark.pose = pose;
+  mark.scale.x = 1.0;
+  mark.scale.y = 1.0;
+  mark.scale.z = 0.1;
+  mark.color.a = 1.0;
+  mark.color.r = 1.0;
+  mark.color.g = 0.0;
+  mark.color.b = 0.0;
+  marks.markers.push_back(mark);
+
+  publisherm_->publish(marks);
+
   // Spawn gate in gazebo
   std::string xml = std::string((
     std::istreambuf_iterator<char>(std::ifstream(this->share_dir + "/models/gate/model.sdf").rdbuf())), std::istreambuf_iterator<char>());
-  spawn_model(this->get_node_base_interface(), this->spawner_, xml, pose, "gate");
+  if (this->get_parameter("use_gui").as_bool()) {
+    spawn_model(this->get_node_base_interface(), this->spawner_, xml, pose, "gate");
+  }
 }
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  // Create the node 
+  // Create the node
   auto node = std::make_shared<GatesPublisher>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }
-

@@ -42,9 +42,8 @@ def generate_launch_description():
         )
 
     # General arguments
-    map_env_params_file = LaunchConfiguration(
-        "map_env_params_file", default=map_env_params_file_path
-    )
+    map_env_params_file = LaunchConfiguration('map_env_params_file', default=map_env_params_file_path)
+    use_gui = LaunchConfiguration('use_gui', default='true')
 
     # Declare LaunchArguments for exposing launching arguments
     launch_args = [
@@ -53,37 +52,43 @@ def generate_launch_description():
             default_value=map_env_params_file_path,
             description="Full path to the map_pkg params file to use",
         ),
+        DeclareLaunchArgument(
+            'use_gui',
+            default_value=use_gui,
+            choices=['true', 'false'],
+            description='Flag to enable gazebo visualization'
+        ),
     ]
 
     # List of nodes to launch
     nodes = [
-        Node(
-            package="map_pkg",
-            executable="send_gates",
-            name="send_gates",
-            output="screen",
-            parameters=[map_env_params_file],
+        Node (
+            package='map_pkg',
+            executable='send_gates',
+            name='send_gates',
+            output='screen',
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
-        Node(
-            package="map_pkg",
-            executable="send_obstacles",
-            name="send_obstacles",
-            output="screen",
-            parameters=[map_env_params_file],
+        Node (
+            package='map_pkg',
+            executable='send_obstacles',
+            name='send_obstacles',
+            output='screen',
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
-        Node(
-            package="map_pkg",
-            executable="send_borders",
-            name="send_borders",
-            output="screen",
-            parameters=[map_env_params_file],
+        Node (
+            package='map_pkg',
+            executable='send_borders',
+            name='send_borders',
+            output='screen',
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
-        Node(
-            package="map_pkg",
-            executable="send_victims",
-            name="send_victims",
-            output="screen",
-            parameters=[map_env_params_file],
+        Node (
+            package='map_pkg',
+            executable='send_victims',
+            name='send_victims',
+            output='screen',
+            parameters=[map_env_params_file, {'use_gui': use_gui}]
         ),
     ]
 
