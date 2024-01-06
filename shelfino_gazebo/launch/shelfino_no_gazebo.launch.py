@@ -37,7 +37,6 @@ def check_exists(context):
 def generate_launch_description():
     # launch.logging.launch_config.level = logging.DEBUG
 
-    gazebo_ros_pkg    = get_package_share_directory('gazebo_ros')
     shelfino_desc_pkg = get_package_share_directory('shelfino_description')
     shelfino_gaze_pkg = get_package_share_directory('shelfino_gazebo')
 

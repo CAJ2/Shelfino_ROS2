@@ -9,9 +9,9 @@
 /**/send_gates:
   ros__parameters:
     use_namespace: false
-    # Values of x and y different from 0.0 will spawn the gates in the given position    
+    # Values of x and y different from 0.0 will spawn the gates in the given position
     x: 0.0
-    y: 0.0 
+    y: 0.0
 
 /**/send_victims:
   ros__parameters:
@@ -40,4 +40,3 @@
           durability: transient_local
           history: keep_last
           reliability: reliable
-
