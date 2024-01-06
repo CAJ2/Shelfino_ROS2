@@ -28,64 +28,6 @@
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
-geometry_msgs::msg::Polygon create_hexagon(double dx){
-        geometry_msgs::msg::Polygon pol;
-        geometry_msgs::msg::Point32 point;
-        std::vector<geometry_msgs::msg::Point32> points_temp;
-        double f = 0.866;  // fixed number for apothem of hexagon calculation
-        point.x = -dx/2;
-        point.y = dx*f;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = dx/2;
-        point.y = dx*f;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = dx;
-        point.y = 0;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = dx/2;
-        point.y = -dx*f;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = -dx/2;
-        point.y = -dx*f;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = -dx;
-        point.y = 0;
-        point.z = 0;
-        points_temp.push_back(point);
-        pol.points = points_temp;
-        return pol;
-}
-
-
-geometry_msgs::msg::Polygon create_rectangle(double dx, double dy){
-        geometry_msgs::msg::Polygon pol;
-        geometry_msgs::msg::Point32 point;
-        std::vector<geometry_msgs::msg::Point32> points_temp;
-        point.x = -dx/2;
-        point.y = -dy/2;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = -dx/2;
-        point.y = dy/2;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = dx/2;
-        point.y = dy/2;
-        point.z = 0;
-        points_temp.push_back(point);
-        point.x = dx/2;
-        point.y = -dy/2;
-        point.z = 0;
-        points_temp.push_back(point);
-        pol.points = points_temp;
-        return pol;
-}
-
 visualization_msgs::msg::Marker create_hexagon_marker(geometry_msgs::msg::Polygon pol){
         visualization_msgs::msg::Marker mark;
         geometry_msgs::msg::Point point;
