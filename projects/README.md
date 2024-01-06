@@ -25,15 +25,15 @@
   - [What you should provide](#what-you-should-provide)
   - [When you should provide the what](#when-you-should-provide-the-what)
   - [How you should provide the what](#how-you-should-provide-the-what)
-- [Other Useful Info](#other-useful-info)
+- [Other useful information](#other-useful-information)
 - [TODOs on my end](#todos-on-my-end)
 - [P.S.](#ps)
 
 # General Description
 
-The project consists of different scenarios, which will challenge the students to apply the algorithms and the theoretical knowledge learned during lectures to practical cases. 
+The project consists of different scenarios, which will challenge the students to apply the algorithms and the theoretical knowledge learned during lectures to practical cases.
 
-The project will focus on implementing algorithms for path planning and target planning. The students will have to design and implement one or more nodes of ROS2 in C++. 
+The project will focus on implementing algorithms for path planning and target planning. The students will have to design and implement one or more nodes of ROS2 in C++.
 
 Briefly the three projects are:
 
@@ -41,12 +41,14 @@ Briefly the three projects are:
 - Target rescue, which will challenge the design of algorithms to maximize the revenue;
 - Pursuit evader, which will challenge the design of algorithms scenarios that change dynamically.
 
-Each group of students, composed at maximum of 3 students $\left(|\text{group}|\in[1,3]\right)$, will have to choose 1 of the 3 scenarios and develop a solution for it. If you want to implement more than one, feel free to do it. 
+Each group of students, composed at maximum of 3 students $\left(|\text{group}|\in[1,3]\right)$, will have to choose 1 of the 3 scenarios and develop a solution for it. If you want to implement more than one, feel free to do it.
 
 General assumptions are:
 
-- The robots move at constant speed, i.e., use Dubins manoeuvres; the speed of the robot cannot be decreased or increased at any time, you have to plan with constant velocity in mind. 
-- Touching the borders of the map and/or the obstacle will decrease the point obtained by completely the task successfully.  
+- The robots move at constant speed, i.e., use Dubins manoeuvres; the speed of the robot cannot be decreased or increased at any time, you have to plan with constant velocity in mind.
+- Touching the borders of the map and/or the obstacle will decrease the point obtained by completely the task successfully.
+- The robots (except for the pursuer in the evasion scenario) must reach the center of the gate and with the angle provided in the topic.
+- Obstacles may have different shapes, so do not assume they are polygons.
 
 ## Coordinate Evacuation
 
@@ -54,7 +56,7 @@ General assumptions are:
 <img src="../assets/images/Evacuation.png" alt="Evacuation image" width="400"/>
 </center>
 
-The project is about designing a coordinate evacuation of a site cluttered by several obstacles and robots. 
+The project is about designing a coordinate evacuation of a site cluttered by several obstacles and robots.
 
 The robots will have to reach a gate in the minimum amount of time avoiding the obstacles _and_ avoiding collisions with other robots.
 
@@ -74,8 +76,8 @@ You will lose points for:
 
 ### Assumptions
 
-- Robots are initially spawned at random position, i.e., get their position as a first thing. 
-- Robots reaching the gate will disappear. 
+- Robots are initially spawned at random position, i.e., get their position as a first thing.
+- Robots reaching the gate will disappear.
 - Since robots move at constant velocity, they _should_ not be able to stop.
 
 ### Steps
@@ -90,13 +92,13 @@ You will lose points for:
 
 The student can make the hypothesis of a synchronous behaviour: i.e., the system evolves in a sequence of states and each state is characterised by having the robot located in one of the nodes of the roadmap. In this way, every step of the plan is ended when all robots have reached a location and no robot is allowed to move to the next location before a step completes. Alternatively, the students can also release this assumption and allow the robot to move freely (asynchronous behaviour).
 
-## Target Rescue 
+## Target Rescue
 
 <center>
 <img src="../assets/images/Rescue.png" alt="Target rescue image" width="400"/>
 </center>
 
-The project consists in rescuing some victims using a single robot. While the order in which the victims are rescued does not matter, they have to be rescued within a time limit. Each victim is associated with a value and the higher the total value of the rescued victims, the better it is. 
+The project consists in rescuing some victims using a single robot. While the order in which the victims are rescued does not matter, they have to be rescued within a time limit. Each victim is associated with a value and the higher the total value of the rescued victims, the better it is.
 
 Failing to reach the goal means failing the task.
 
@@ -114,10 +116,10 @@ You will lose points for:
 
 ### Assumptions
 
-- While victims are circles of radius 0.5m, the robot must pass though the center of the circle in order to rescue them. 
+- While victims are circles of radius 0.5m, the robot must pass though the center of the circle in order to rescue them.
 - The robot does not need to stop to rescue e victim.
 - The robot and the victims are initially deployed in random positions.
-- Since robots move at constant velocity, they should not stop.
+- Since robots move at constant velocity, they _must not_ stop or slow down.
 
 ## Pursuit-Evasion
 
@@ -129,7 +131,7 @@ The project is about capturing an evader robot (evader) using a pursuer robot. B
 
 The map can have one or more exit points and the project has different levels of difficulty, as detailed below.
 
-While the evader will be provided, the students will have to code the behaviour of the pursuer so that it can catch the evader.
+The students will have to code the behaviour of both the pursuer and the evader.
 
 
 ### Evaluation
@@ -151,18 +153,19 @@ Also the points will be given based on the difficulty of the scenario: catching 
 
 - The robots are initially deployed at random positions.
 - The evader _is controller by the computer_ but it HAS to move following the same roadmap computed by the pursuer. The students will have to publish said roadmap on a topic so that it can be used by the evader algorithm to compute the path.
-- You can assume that once the evader takes a link, it has to complete the movement and cannot back-off or stop.
-- Since robots move at constant velocity, they _should_ not stop.
-- The pursuer does not know the evader's future path, hence you cannot read from the evader topic to get the path it will follow. 
+- You can assume that once the evader takes a link of the graph, it has to complete the movement and cannot back-off or stop.
+- Since robots move at constant velocity, they _must_ not stop or slow down.
+- The pursuer does not know the evader's future path, hence you cannot read from the evader topic to get the path it will follow.
+- Once the evader has chosen a gate to reach, it will follow the shortest path to the gate without considering other smarter policies to avoid the pursuer(s).
 
 ### Level of complexity
 
 The behaviour of the evader is organised in increasing levels of complexity:
 
 1. There is only one exit and the evader has to reach it in minimum time.
-   
+
 2. There are two exits and at each location of the roadmap reached by the evader, it can decide non-deterministically to go in minimum time to one or to the other.
-   
+
 3. There are two exits and at each location of the roadmap the evader can decide to take one or the other accounting for the presence of the pursuer.
 
 4. Given a not smart behaviour of the evader as in point 2, there are multiple pursuer that can be used to catch the evader. Pursuers must coordinate, i.e., they must not collide otherwise the group will lose points.
@@ -174,9 +177,9 @@ The students will setup a strategy (e.g., optimisation-based, heuristic) to deci
 
 # How to develop the project
 
-## Getting the simulation 
+## Getting the simulation
 
-The code for the simulation is available at: [https://github.com/pla10/Shelfino_ROS2/](https://github.com/pla10/Shelfino_ROS2/). The simulation uses an external library to check for collisions of the obstacles, so once you downloaded it, make sure to enter in the main folder and run 
+The code for the simulation is available at: [https://github.com/pla10/Shelfino_ROS2/](https://github.com/pla10/Shelfino_ROS2/). The simulation uses an external library to check for collisions of the obstacles, so once you downloaded it, make sure to enter in the main folder and run
 
 ```bash
 git submodule update --init --recursive
@@ -188,29 +191,29 @@ To create the workspace, clone the repository and its submodules, you should run
 
 ```bash
 mkdir shelfino_ws
-cd shelfino_ws 
+cd shelfino_ws
 git clone https://github.com/pla10/Shelfino_ROS2/ src --recurse-submodules
 ```
 
-The structure of the code is the following: 
+The structure of the code is the following:
 
 - `assets`: contains images used in the READMEs.
 
 - `graph_msgs`: contains the interface of the `graph_msgs` to be used to publish the roadmap.
- 
-- `map_pkg`: contains 
+
+- `map_pkg`: contains
   - spawning random obstacles;
   - spawning random victims;
   - spawning random gates, only along the borders of the map;
   - spawning the borders;
-  
+
   This package publishes the following topics:
-  - `/obstacles`: contains the obstacles that are present on the map. They may be only cylinders or boxes. In the former, the center $(x, y)$ in $z=0$ and the radius are provided, in the latter, the center $(x,y)$ in $z=0$ and the lengths of the borders are provided. 
-  - `/map_borders`: 
+  - `/obstacles`: contains the obstacles that are present on the map. They may be only cylinders or boxes. In the former, the center $(x, y)$ in $z=0$ and the radius are provided, in the latter, the center $(x,y)$ in $z=0$ and the lengths of the borders are provided.
+  - `/map_borders`:
   - `/victims`: contains information for the victims, which are thought as circles of radius 0.5m.
   - `/gate_position`: contains the position and orientation of the gate.
-  
-  This package can be configured using the `map_config.yaml` file inside of `map_pkg/config`. Also check the launch file to have more information on the possible parameters to pass. 
+
+  This package can be configured using the `map_config.yaml` file inside of `map_pkg/config`. Also check the launch file to have more information on the possible parameters to pass.
 
 - `obstacles_msgs`: contains the interfaces used to publish the obstacles and the victims.
 
@@ -221,25 +224,25 @@ The structure of the code is the following:
 
   Check the launch files for more information.
 
-- `shelfino_description`: it contains the launch file for starting the robot state publisher and the models to be used both in Rviz and in Gazebo. 
-  
+- `shelfino_description`: it contains the launch file for starting the robot state publisher and the models to be used both in Rviz and in Gazebo.
+
 - `shelfino_gazebo`: it contains the launch file to start the simulation in Gazebo. It also contains some pre-defined worlds.
-  
+
 - `shelfino_navigation`: it contains the launch file and the parameters to start the Nav2 environment for the Shelfino.
 
-You are free to change the parameters in every of the nodes, but you should carefully explain why you chose to and what benefit it provided. 
+You are free to change the parameters in every of the nodes, but you should carefully explain why you chose to and what benefit it provided.
 
 Remember that each Shelfino will have its own namespace so the topics that are dependent on the Shelfino, for example the topic `/initialpose`, which provide the initial position of a Shelfino, will be remapped to `/shelfino#/initialpose`, where # is the number of the Shelfino.
 
 ## The missing
 
-So what is missing? The course is called Robot Planing and its Applications, so all the planning part is missing. 
+So what is missing? The course is called Robot Planing and its Applications, so all the planning part is missing.
 
 You should write C++ (standard 17) nodes that allow the robots to complete their tasks. To do so:
 
-- Build the roadmap by reading the borders from `/map_borders` and the obstacles from `/obstacles`. If you are doing the pursuer-evader project, you *must* also publish the graph that you obtained using the messages available in graph_msgs. 
+- Build the roadmap by reading the borders from `/map_borders` and the obstacles from `/obstacles`. If you are doing the pursuer-evader project, you *must* also publish the graph that you obtained using the messages available in graph_msgs.
 - Create a node that is used for path planning using Dubins.
-- Once you have the roadmap and a path planner, you should compute the best path for the robots to complete their tasks. Once that's done, split each path and 
+- Once you have the roadmap and a path planner, you should compute the best path for the robots to complete their tasks. Once that's done, split each path and
   - publish them on the topic `/shelfino#/plan1`, and
   - create an action request to FollowPath\* of Nav2 passing the points you have computed from the split. Also you should monitor the action server.
 - [Optional] Monitor the movements and avoid collisions between robots, obstacles and/or borders.
@@ -252,35 +255,40 @@ You should write C++ (standard 17) nodes that allow the robots to complete their
 
 - A PDF report describing the approach followed, the reason why you decided to follow said approach and the difficulties encountered. You should also, but it's not mandatory, include possible results that you have obtained, for example, statistics on the times it takes to compute a solution and/or the length of the solutions it finds. Any information that you think may be interesting regarding the project should be included.
 - An archive containing all the software to allow reproducing the approach written in the report.
-- Optionally, one or more videos showing how your code works and showing a few simulations completed successfully. This does NOT replace the exam, i.e., the simulations run on the day of the exam, in any way or form, but may be used to your advantage. 
+- Optionally, one or more videos showing how your code works and showing a few simulations completed successfully. This does NOT replace the exam, i.e., the simulations run on the day of the exam, in any way or form, but may be used to your advantage.
 
 ## When you should provide the what
 
 You should deliver the report and the code at least **1 week** before the date of the exam. Exam dates will be released in the near future and this document will be updated with them.
 
-## How you should provide the what 
+| Date of exam | Delivery date          |
+|--------------|------------------------|
+| 12/01/2024   | 11/01/2024 12:00 (CET) |
+| 16/02/2024   | 14/02/2024 23:59 (CET) |
+| TBD          | One week before        |
 
-As said, [this](https://github.com/pla10/Shelfino_ROS2/) is the repository containing the code of the simulation and that is updated to fix bug and/or to add new features. 
+## How you should provide the what
 
-The best thing would be for each group to create a fork of the repository so that [you can pull changes](https://stackoverflow.com/questions/7244321/how-do-i-update-or-sync-a-forked-repository-on-github) from the main repo if new fixes or features are added. 
+As said, [this](https://github.com/pla10/Shelfino_ROS2/) is the repository containing the code of the simulation and that is updated to fix bug and/or to add new features.
+
+The best thing would be for each group to create a fork of the repository so that [you can pull changes](https://stackoverflow.com/questions/7244321/how-do-i-update-or-sync-a-forked-repository-on-github) from the main repo if new fixes or features are added.
 
 In any case, for the delivery you will have to provide an archive containing the code. Obviously no pre-compiled files nor executable will be taken into consideration.
 
-You should send the archive and the pdf to me as an email and wait for my ACK on the reception of the email. Also, in the email you should state the group components, and a name for the group (if you have chosen one). 
+You should send the archive and the pdf to me as an email and wait for my ACK on the reception of the email. Also, in the email you should state the group components, and a name for the group (if you have chosen one).
 
-# Other Useful Info
+# Other useful information
 
-Since many of you have asked, we are going to provide a computer in the robotics laboratory at DISI. Please, to use it coordinate with me for the creation of your account. After this step, you'll be able to book timeslots to work on the projects, through a portal that I'll set up.
-
-The exams of January and (likely) February are going to be simulation-based, i.e., the mark will be given on how your code will work with the simulation. The exams during the summer exam session will be also graded on how the code works on the real robots, until further notice.
+- You can use any C++ standard from C++14 and above. Mind though that the last standard for which ROS2 has complete support is C++17, while for above stanrdard there may be problems when compiling.
+- AFAIC, using Nav2 FollowPath is the best course of actions. In this case, you should create your path using Dubins, split it in segments with the same lengths and then make a request to the Nav2 FollowPat action server to follow the points that you passed. The only part of this that is implemented is the Nav2 FollowPath server, but both the Dubins planner and the action client must be coded by you.
 
 # TODOs on my end
 
-- As you may see by looking at the repository, the evader package is still empty. It will be updated during the week. 
+- As you may see by looking at the repository, the evader package is still empty. It will be updated during the week.
 - Some files are still missing their documentation. I'll see to udpate them as soon as I can .
 - I'm aware that some of you have asked me to create a server for running Gazebo remotely, but it's not a simple task. Just know that I'll look into this as soon as I have the means.
 - Fixing the robots. I hoped it would have taken less time, but at this point I hope to be able to fix them for end of December so that you can test your code on them by January. I'll keep you updated.
 
-# P.S. 
+# P.S.
 
 Be warned that the code and the report will be run for plagiarism, and if found to be plagiarised you will face the legal and ethical consequences of such.
