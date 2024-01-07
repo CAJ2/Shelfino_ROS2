@@ -10,10 +10,13 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(obstacles_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
@@ -22,6 +25,7 @@ install(DIRECTORY launch config
 # list of nodes
 set(NODES
   static_robot_state
+  points_subscriber
 )
 
 #add_library(${PROJECT_NAME}_lib SHARED
@@ -61,8 +65,11 @@ foreach(NODE ${NODES})
     "rclcpp"
     "std_msgs"
     "nav_msgs"
+    "obstacles_msgs"
     "tf2"
     "tf2_ros"
+    "lifecycle_msgs"
+    "rclcpp_lifecycle"
     "geometry_msgs"
     "tf2_geometry_msgs"
   )
