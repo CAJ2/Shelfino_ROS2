@@ -19,6 +19,8 @@
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 using std::placeholders::_1;
 
@@ -51,14 +53,30 @@ class PointsSubscriber : public rclcpp::Node
       		"/obstacles", qos, std::bind(&PointsSubscriber::obstacles_callback, this, _1));
       victims_subscription_ = this->create_subscription<obstacles_msgs::msg::ObstacleArrayMsg>(
       		"/victims", qos, std::bind(&PointsSubscriber::victims_callback, this, _1));
-      borders_subscription_ = this->create_subscription<geometry_msgs::msg::Polygon>(
-      		"/map_borders", qos, std::bind(&PointsSubscriber::borders_callback, this, _1));
+      //borders_subscription_ = this->create_subscription<geometry_msgs::msg::Polygon>(
+      //		"/map_borders", qos, std::bind(&PointsSubscriber::borders_callback, this, _1));
+      		
+      publisherm_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/possible_waypoints", qos);
       		
 
     }
 
   private:
-    void obstacles_callback(const obstacles_msgs::msg::ObstacleArrayMsg::SharedPtr msg) const
+  
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisherm_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr gate_subscription_;
+    rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr obstacles_subscription_;
+    rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr victims_subscription_;
+    //rclcpp::Subscription<geometry_msgs::msg::Polygon>::SharedPtr borders_subscription_;
+    
+    //std::vector<obstacle> gates;
+    //std::vector<obstacle> obstacles;
+
+    bool gate_ready = false;
+    bool obstacles_ready = false;
+    bool victims_ready = false;
+    
+    void obstacles_callback(const obstacles_msgs::msg::ObstacleArrayMsg::SharedPtr msg)
     {
        RCLCPP_INFO(this->get_logger(), "\n\n ######### Obstacles###########\n\n");
   
@@ -79,10 +97,12 @@ class PointsSubscriber : public rclcpp::Node
         
        
       }
+      this->obstacles_ready = true;
+      this->activate_wrapper();
       
     }
     
-    void victims_callback(const obstacles_msgs::msg::ObstacleArrayMsg::SharedPtr msg) const
+    void victims_callback(const obstacles_msgs::msg::ObstacleArrayMsg::SharedPtr msg)
     {
       RCLCPP_INFO(this->get_logger(), "\n\n ######### Victims ###########\n\n");
   
@@ -93,9 +113,11 @@ class PointsSubscriber : public rclcpp::Node
             RCLCPP_INFO(this->get_logger(), "center in (%f,%f) and value of %f", obstacle.polygon.points[0].x, obstacle.polygon.points[0].y, obstacle.radius);
 
       }
+      this->victims_ready = true;
+      this->activate_wrapper();
     }
       
-    void gate_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg) const
+    void gate_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
     {
       RCLCPP_INFO(this->get_logger(), "\n\n ######### Gate ###########\n\n");
   
@@ -103,10 +125,13 @@ class PointsSubscriber : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "Gate with:");
       RCLCPP_INFO(this->get_logger(), "center in (%f,%f)", msg->poses[0].position.x, msg->poses[0].position.x);
 
-      
+      this->gate_ready = true;
+      this->activate_wrapper();
+
     }
     
-   void borders_callback(const geometry_msgs::msg::Polygon::SharedPtr msg) const
+    /*
+    void borders_callback(const geometry_msgs::msg::Polygon::SharedPtr msg)
     {
       RCLCPP_INFO(this->get_logger(), "\n\n ######### Borders ###########\n\n");
   
@@ -114,13 +139,71 @@ class PointsSubscriber : public rclcpp::Node
             RCLCPP_INFO(this->get_logger(), "vertece in (%f,%f)", vert.x, vert.y);
       }
       
+      
+      this->activate();
+      
+      
+    }
+    */
+    
+    visualization_msgs::msg::Marker add_point(float x, float y, int id){
+    	// Publish markers
+	std_msgs::msg::Header hh;
+	hh.stamp = this->get_clock()->now();
+	hh.frame_id = "map";
+
+	geometry_msgs::msg::Pose pose;
+	pose.position.x = x;
+	pose.position.y = y;
+
+    	
+    	visualization_msgs::msg::Marker mark;
+	
+	mark.header = hh;
+	mark.ns = "victims";
+	mark.id = id;
+	mark.action = visualization_msgs::msg::Marker::ADD;
+	mark.type = visualization_msgs::msg::Marker::CYLINDER;
+	mark.pose = pose;
+	mark.scale.x = 0.5;
+	mark.scale.y = 0.5;
+	mark.scale.z = 0.01;
+	mark.color.a = 1.0;
+	mark.color.r = 1.0;
+	mark.color.g = 0.0;
+	mark.color.b = 1.0;
+	
+    	return mark;
+    }
+    
+    void activate_wrapper(){
+    	if (this->gate_ready && this->obstacles_ready && this->victims_ready){
+    		this->activate();
+    	}else{
+    		RCLCPP_INFO(this->get_logger(), "Waiting for infos to be ready");
+    	}
+    
+    }
+    
+    void activate(){
+
+
+	visualization_msgs::msg::MarkerArray marks;
+	
+	
+	visualization_msgs::msg::Marker mark1 = add_point(1, 1, 1);
+	marks.markers.push_back(mark1);
+	visualization_msgs::msg::Marker mark2 = add_point(2, 2, 2);
+	marks.markers.push_back(mark2);
+	
+	
+	this->publisherm_->publish(marks);
+
+    	RCLCPP_INFO(this->get_logger(), "\n\n !!!!! Points spawned !!!!!!! \n\n");
     }
     
     
-    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr gate_subscription_;
-    rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr obstacles_subscription_;
-    rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr victims_subscription_;
-    rclcpp::Subscription<geometry_msgs::msg::Polygon>::SharedPtr borders_subscription_;
+
 };
 
 int main(int argc, char * argv[])

@@ -17,6 +17,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
@@ -72,6 +73,7 @@ foreach(NODE ${NODES})
     "rclcpp_lifecycle"
     "geometry_msgs"
     "tf2_geometry_msgs"
+    "visualization_msgs"
   )
 
   install(TARGETS ${NODE}
