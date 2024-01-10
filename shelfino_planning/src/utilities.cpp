@@ -1,4 +1,4 @@
-#include "map_pkg/utilities.hpp"
+#include "utilities.hpp"
 
 h2d::CPolyline obs_to_cpoly (const obstacle& obs){
   h2d::CPolyline poly;

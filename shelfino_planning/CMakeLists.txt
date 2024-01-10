@@ -29,29 +29,30 @@ set(NODES
   points_subscriber
 )
 
-#add_library(${PROJECT_NAME}_lib SHARED
-#)
+add_library(${PROJECT_NAME}_lib SHARED
+  src/utilities.cpp
+)
 
-#target_include_directories(${PROJECT_NAME}_lib PUBLIC
-#  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#  $<INSTALL_INTERFACE:include>)
+target_include_directories(${PROJECT_NAME}_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 
-#target_compile_features(${PROJECT_NAME}_lib PUBLIC c_std_99 cxx_std_17)
+target_compile_features(${PROJECT_NAME}_lib PUBLIC c_std_99 cxx_std_17)
 
-#ament_target_dependencies(
-#  ${PROJECT_NAME}_lib
-#  "rclcpp"
-#  "std_msgs"
-#  "nav_msgs"
-#  "tf2"
-#  "tf2_ros"
-#  "geometry_msgs"
-#)
-
+ament_target_dependencies(
+  ${PROJECT_NAME}_lib
+  "geometry_msgs"
+  "rclcpp"
+  "obstacles_msgs"
+  "tf2"
+  "visualization_msgs"
+  "lifecycle_msgs"
+  "rclcpp_lifecycle"
+)
 
 # build nodes
 foreach(NODE ${NODES})
-  add_executable(${NODE} src/${NODE}.cpp)
+  add_executable(${NODE} src/${NODE}.cpp src/utilities.cpp)
 
   target_include_directories(${NODE} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -71,6 +72,7 @@ foreach(NODE ${NODES})
     "tf2_ros"
     "lifecycle_msgs"
     "rclcpp_lifecycle"
+    "rclcpp"
     "geometry_msgs"
     "tf2_geometry_msgs"
     "visualization_msgs"
