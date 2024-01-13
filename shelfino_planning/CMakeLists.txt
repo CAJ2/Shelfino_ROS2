@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(shelfino_planning)
 
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -18,6 +21,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(planning_msgs REQUIRED)
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
@@ -27,6 +31,8 @@ install(DIRECTORY launch config
 set(NODES
   static_robot_state
   points_subscriber
+  roadmap_harness
+  random_points
 )
 
 add_library(${PROJECT_NAME}_lib SHARED
@@ -48,6 +54,8 @@ ament_target_dependencies(
   "visualization_msgs"
   "lifecycle_msgs"
   "rclcpp_lifecycle"
+  "planning_msgs"
+  "rclcpp_action"
 )
 
 # build nodes
@@ -76,6 +84,8 @@ foreach(NODE ${NODES})
     "geometry_msgs"
     "tf2_geometry_msgs"
     "visualization_msgs"
+    "planning_msgs"
+    "rclcpp_action"
   )
 
   install(TARGETS ${NODE}

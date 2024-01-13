@@ -1,0 +1,5 @@
+obstacles_msgs/ObstacleArrayMsg gate
+obstacles_msgs/ObstacleArrayMsg obstacles
+obstacles_msgs/ObstacleArrayMsg victims
+---
+Roadmap roadmap

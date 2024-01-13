@@ -41,9 +41,11 @@ def generate_launch_description():
     shelfino_nav2_pkg  = get_package_share_directory('shelfino_navigation')
     shelfino_gaze_pkg  = get_package_share_directory('shelfino_gazebo')
     map_env_pkg        = get_package_share_directory('map_pkg')
+    planning_pkg       = get_package_share_directory('shelfino_planning')
 
     nav2_params_file_path    = os.path.join(shelfino_nav2_pkg, 'config', 'shelfino.yaml')
     map_env_params_file_path = os.path.join(map_env_pkg, 'config', 'map_config.yaml')
+    planning_params_file_path = os.path.join(planning_pkg, 'config', 'planning_config.yaml')
 
     # General arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
@@ -63,6 +65,7 @@ def generate_launch_description():
 
     # Map package arguments
     map_env_params_file = LaunchConfiguration('map_env_params_file', default=map_env_params_file_path)
+    planning_params_file = LaunchConfiguration('planning_params_file', default=planning_params_file_path)
 
     shelfino_name = PythonExpression(["'", 'shelfino', shelfino_id, "'"])
 
@@ -182,6 +185,15 @@ def generate_launch_description():
             name='static_robot_state',
             output='screen',
             namespace= shelfino_name,
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                os.path.join(planning_pkg, 'launch'),
+                '/planning.launch.py']
+            ),
+            launch_arguments= {
+                'planning_params_file': planning_params_file,
+            }.items()
         ),
     ]
 

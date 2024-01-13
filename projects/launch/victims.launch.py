@@ -46,9 +46,11 @@ def generate_launch_description():
     shelfino_nav2_pkg  = get_package_share_directory('shelfino_navigation')
     shelfino_gaze_pkg  = get_package_share_directory('shelfino_gazebo')
     map_env_pkg        = get_package_share_directory('map_pkg')
+    planning_pkg       = get_package_share_directory('shelfino_planning')
 
     nav2_params_file_path    = os.path.join(shelfino_nav2_pkg, 'config', 'shelfino.yaml')
     map_env_params_file_path = os.path.join(map_env_pkg, 'config', 'map_config.yaml')
+    planning_params_file_path = os.path.join(planning_pkg, 'config', 'planning_config.yaml')
 
     # General arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
@@ -67,6 +69,7 @@ def generate_launch_description():
 
     # Map package arguments
     map_env_params_file = LaunchConfiguration('map_env_params_file', default=map_env_params_file_path)
+    planning_params_file = LaunchConfiguration('planning_params_file', default=planning_params_file_path)
 
     shelfino_name = PythonExpression(["'", 'shelfino', shelfino_id, "'"])
 
@@ -190,7 +193,7 @@ def generate_launch_description():
                 'rviz_config_file': nav2_rviz_config_file,
             }.items()
         ),
-        Node ( 
+        Node (
             package='shelfino_gazebo',
             executable='destroy_shelfino',
             name='destroy_shelfino',
@@ -199,6 +202,16 @@ def generate_launch_description():
             parameters=[{'use_sim_time': use_sim_time}]
         ),
     ])
+
+    planning_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                os.path.join(planning_pkg, 'launch'),
+                '/planning.launch.py']
+            ),
+            launch_arguments= {
+                'planning_params_file': planning_params_file,
+            }.items()
+        )
 
     ld = LaunchDescription()
 
@@ -220,6 +233,7 @@ def generate_launch_description():
     ld.add_action(map_pkg_launch)
     ld.add_action(sim_nodes)
     ld.add_action(create_map_node)
+    ld.add_action(planning_launch)
 
     def launch_nodes(event: ProcessExited, context: LaunchContext):
         print(f'node {event.process_name} exited, launching other nodes.')

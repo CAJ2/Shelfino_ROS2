@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/polygon.hpp"
@@ -22,7 +22,7 @@ static const rmw_qos_profile_t rmw_qos_profile_custom =
 
 /**
  * @brief Checks if the time elapsed since start_time is greater than max_timeout
- * 
+ *
  * @param clock The clock to use
  * @param start_time The initial time
  * @param max_timeout The maximum time to wait
@@ -30,16 +30,16 @@ static const rmw_qos_profile_t rmw_qos_profile_custom =
  * @return false If the time elapsed is not greater than max_timeout
  */
 inline bool overTime (
-  const rclcpp::Clock::SharedPtr& clock, 
-  const rclcpp::Time& start_time, 
-  int max_timeout) 
+  const rclcpp::Clock::SharedPtr& clock,
+  const rclcpp::Time& start_time,
+  int max_timeout)
 {
   return (clock->now() - start_time).seconds() > max_timeout;
 }
 
 /**
  * @brief Function that checks that two obstacles do not overlap
- * 
+ *
  * @param o1 Obstacle 1
  * @param o2 Obstacle 2
  * @return true If the obstacles overlap
@@ -49,7 +49,7 @@ bool overlaps(obstacle o1, obstacle o2);
 
 /**
  * @brief Function that checks if an obstacles overlaps with any of the obstacles in a vector
- * 
+ *
  * @param o1 The obstacle to check
  * @param obstacles The vector of obstacles to check against
  * @return true If the obstacle overlaps with any of the obstacles in the vector
@@ -59,10 +59,10 @@ bool overlaps(obstacle o1, std::vector<obstacle> obstacles);
 
 /**
  * @brief It checks if the obstacle is inside the map
- * @details For the hexagon map, it checks only the main square plus the rectangles 
+ * @details For the hexagon map, it checks only the main square plus the rectangles
  * above, below, left and right. It does not check the corners, which are consider
  * out of the map.
- * 
+ *
  * @param obs The obstacle to check
  * @param map The map to use
  * @param dx The x dimension of the map
@@ -80,7 +80,7 @@ static const std::vector<obstacle> default_victims = std::vector<obstacle>();
 
 /**
  * @brief Checks if the obstacle overlaps with any other obstacle in the vector
- * 
+ *
  * @param obs The obstacle to check
  * @param obstacles The vector of obstacles
  * @param map The type of the map (rectangle or hexagon)
