@@ -8,7 +8,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "utilities.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 
 #include <chrono>
 #include <functional>
@@ -24,7 +23,6 @@
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
-#include "planning_msgs/action/gen_roadmap.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -47,9 +45,6 @@ static const rmw_qos_profile_t rmw_qos_profile_custom2 =
 class RoadmapHarness : public rclcpp::Node
 {
 public:
-	using GenRoadmap = planning_msgs::action::GenRoadmap;
-	using GoalHandleGenRoadmap = rclcpp_action::ClientGoalHandle<GenRoadmap>;
-
     explicit RoadmapHarness()
     : Node("roadmap_harness")
     {
@@ -66,7 +61,6 @@ public:
         publisher_rviz = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/roadmap", qos);
         publisher_roadmap = this->create_publisher<obstacles_msgs::msg::ObstacleArrayMsg>("/roadmap", qos);
 
-
         this->declare_parameter("roadmap_services", std::vector<std::string>());
         this->declare_parameter("publish_roadmap_service", "");
     }
@@ -82,27 +76,6 @@ public:
 
         this->srv_clients.erase(this->srv_clients.begin(), this->srv_clients.end());
         for (auto s : services) {
-            auto client_ptr_ = rclcpp_action::create_client<GenRoadmap>(
-                this,
-                s);
-            if (!client_ptr_->wait_for_action_server()) {
-                RCLCPP_ERROR(this->get_logger(), "Action server not available after waiting");
-                rclcpp::shutdown();
-            }
-
-            auto goal_msg = GenRoadmap::Goal();
-
-            RCLCPP_INFO(this->get_logger(), "Sending goal");
-
-            auto send_goal_options = rclcpp_action::Client<GenRoadmap>::SendGoalOptions();
-            send_goal_options.goal_response_callback =
-                std::bind(&RoadmapHarness::goal_response_cb, this, _1);
-            send_goal_options.feedback_callback =
-                std::bind(&RoadmapHarness::feedback_cb, this, _1, _2);
-            send_goal_options.result_callback =
-                std::bind(&RoadmapHarness::result_cb, this, _1);
-            client_ptr_->async_send_goal(goal_msg, send_goal_options);
-
             auto client = this->create_client<planning_msgs::srv::GenRoadmap>(s);
             this->srv_clients.push_back(client);
             if (!client->wait_for_service(2s)) {
@@ -250,45 +223,6 @@ private:
         this->gate_ready = true;
         this->activate_wrapper();
 
-    }
-
-    void goal_response_cb(const GoalHandleGenRoadmap::SharedPtr & goal_handle)
-    {
-        if (!goal_handle) {
-        RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
-        } else {
-        RCLCPP_INFO(this->get_logger(), "Goal accepted by server, waiting for result");
-        }
-    }
-
-    void feedback_cb(
-        GoalHandleGenRoadmap::SharedPtr,
-        const std::shared_ptr<const GenRoadmap::Feedback> feedback)
-    {
-        std::stringstream ss;
-        ss << "Next number in sequence received: ";
-        RCLCPP_INFO(this->get_logger(), ss.str().c_str());
-    }
-
-    void result_cb(const GoalHandleGenRoadmap::WrappedResult & result)
-    {
-        switch (result.code) {
-        case rclcpp_action::ResultCode::SUCCEEDED:
-            break;
-        case rclcpp_action::ResultCode::ABORTED:
-            RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
-            return;
-        case rclcpp_action::ResultCode::CANCELED:
-            RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
-            return;
-        default:
-            RCLCPP_ERROR(this->get_logger(), "Unknown result code");
-            return;
-        }
-        std::stringstream ss;
-        ss << "Result received: ";
-        RCLCPP_INFO(this->get_logger(), ss.str().c_str());
-        rclcpp::shutdown();
     }
 
     visualization_msgs::msg::Marker add_point(float x, float y, std::string service, int id) {

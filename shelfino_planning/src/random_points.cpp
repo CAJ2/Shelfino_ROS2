@@ -9,7 +9,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "utilities.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 
 #include <functional>
 #include <memory>
@@ -22,7 +21,6 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
-#include "planning_msgs/action/gen_roadmap.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -30,79 +28,15 @@ using std::placeholders::_2;
 class RandomPoints : public rclcpp::Node
 {
   public:
-	using GenRoadmap = planning_msgs::action::GenRoadmap;
-	using GoalHandleGenRoadmap = rclcpp_action::ServerGoalHandle<GenRoadmap>;
-
     RandomPoints()
     : Node("random_points")
     {
 		this->roadmap_service = this->create_service<planning_msgs::srv::GenRoadmap>("random_points",
 			std::bind(&RandomPoints::generate, this, _1, _2));
-
-		this->action_server_ = rclcpp_action::create_server<GenRoadmap>(
-			this,
-			"random_points",
-			std::bind(&RandomPoints::handle_goal, this, _1, _2),
-			std::bind(&RandomPoints::handle_cancel, this, _1),
-			std::bind(&RandomPoints::handle_accepted, this, _1));
 	}
 
   private:
 	rclcpp::Service<planning_msgs::srv::GenRoadmap>::SharedPtr roadmap_service;
-
-	rclcpp_action::Server<planning_msgs::action::GenRoadmap>::SharedPtr action_server_;
-
-	rclcpp_action::GoalResponse handle_goal(
-		const rclcpp_action::GoalUUID & uuid,
-		std::shared_ptr<const GenRoadmap::Goal> goal)
-	{
-		RCLCPP_INFO(this->get_logger(), "Received goal request with %ld obstacles", goal->obstacles.obstacles.size());
-		(void)uuid;
-		return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-	}
-
-	rclcpp_action::CancelResponse handle_cancel(
-		const std::shared_ptr<GoalHandleGenRoadmap> goal_handle)
-	{
-		RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-		(void)goal_handle;
-		return rclcpp_action::CancelResponse::ACCEPT;
-	}
-
-	void handle_accepted(const std::shared_ptr<GoalHandleGenRoadmap> goal_handle)
-	{
-		using namespace std::placeholders;
-		// this needs to return quickly to avoid blocking the executor, so spin up a new thread
-		std::thread{std::bind(&RandomPoints::execute, this, _1), goal_handle}.detach();
-	}
-
-	void execute(const std::shared_ptr<GoalHandleGenRoadmap> goal_handle)
-	{
-		RCLCPP_INFO(this->get_logger(), "Executing goal");
-		rclcpp::Rate loop_rate(1);
-		const auto goal = goal_handle->get_goal();
-		auto feedback = std::make_shared<GenRoadmap::Feedback>();
-		auto result = std::make_shared<GenRoadmap::Result>();
-
-		// Check if there is a cancel request
-		if (goal_handle->is_canceling()) {
-			goal_handle->canceled(result);
-			RCLCPP_INFO(this->get_logger(), "Goal canceled");
-			return;
-		}
-		// Publish feedback
-		goal_handle->publish_feedback(feedback);
-		RCLCPP_INFO(this->get_logger(), "Publish feedback");
-
-		loop_rate.sleep();
-
-		// Check if goal is done
-		if (rclcpp::ok()) {
-			goal_handle->succeed(result);
-			RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-		}
-	}
-
 
     void generate(const std::shared_ptr<planning_msgs::srv::GenRoadmap::Request> request,
 		std::shared_ptr<planning_msgs::srv::GenRoadmap::Response> response) {
