@@ -19,6 +19,7 @@ find_package(obstacles_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RoadmapEdge.msg"
   "msg/Roadmap.msg"
+  "msg/RoadmapInfo.msg"
   "srv/GenRoadmap.srv"
   "action/GenRoadmap.action"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs obstacles_msgs

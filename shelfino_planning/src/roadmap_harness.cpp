@@ -8,6 +8,9 @@
 #include "std_msgs/msg/string.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "utilities.hpp"
+#include "tf2/exceptions.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.h"
 
 #include <chrono>
 #include <functional>
@@ -23,6 +26,7 @@
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
+#include "planning_msgs/msg/roadmap_info.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -59,7 +63,12 @@ public:
                 "/victims", qos, std::bind(&RoadmapHarness::victims_callback, this, _1));
 
         publisher_rviz = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/roadmap", qos);
-        publisher_roadmap = this->create_publisher<obstacles_msgs::msg::ObstacleArrayMsg>("/roadmap", qos);
+        publisher_roadmap = this->create_publisher<planning_msgs::msg::RoadmapInfo>("/roadmap", qos);
+
+        tf_buffer_ =
+            std::make_unique<tf2_ros::Buffer>(this->get_clock());
+        tf_listener_ =
+            std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
         this->declare_parameter("roadmap_services", std::vector<std::string>());
         this->declare_parameter("publish_roadmap_service", "");
@@ -90,6 +99,30 @@ public:
                 RCLCPP_INFO(this->get_logger(), "Service %s (took %ld ms) returned roadmap with %ld nodes",
                     s.c_str(), service_duration.count(), response->roadmap.nodes.size());
 
+                geometry_msgs::msg::TransformStamped t;
+                try {
+                    t = tf_buffer_->lookupTransform("shelfino0/base_link", "map", tf2::TimePointZero);
+                } catch (const tf2::TransformException & ex) {
+                    RCLCPP_INFO(this->get_logger(), "Could not transform map to shelfino0/base_link: %s", ex.what());
+                    return;
+                }
+
+                planning_msgs::msg::RoadmapInfo info;
+                info.header.stamp = this->now();
+                info.header.frame_id = "map";
+                info.roadmap = response->roadmap;
+                info.generator = s;
+                info.roadmap_duration = service_duration.count();
+                info.robot_pose.header.stamp = t.header.stamp;
+                info.robot_pose.pose.pose.position.x = t.transform.translation.x;
+                info.robot_pose.pose.pose.position.y = t.transform.translation.y;
+                info.robot_pose.pose.pose.orientation = t.transform.rotation;
+                info.gate.position.x = this->gates[0].x;
+                info.gate.position.y = this->gates[0].y;
+                info.obstacles.obstacles = this->obstacles;
+                info.victims.obstacles = this->victims;
+                this->publisher_roadmap->publish(info);
+
                 visualization_msgs::msg::MarkerArray marks;
                 for (size_t i = 0; i < response->roadmap.nodes.size(); i++) {
                     auto node = response->roadmap.nodes[i];
@@ -106,10 +139,12 @@ public:
 private:
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_rviz;
-    rclcpp::Publisher<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr publisher_roadmap;
+    rclcpp::Publisher<planning_msgs::msg::RoadmapInfo>::SharedPtr publisher_roadmap;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr gate_subscription_;
     rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr obstacles_subscription_;
     rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr victims_subscription_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
     std::vector<std::shared_ptr<rclcpp::Client<planning_msgs::srv::GenRoadmap>>> srv_clients;
 
