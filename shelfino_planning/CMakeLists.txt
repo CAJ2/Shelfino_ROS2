@@ -33,6 +33,7 @@ set(NODES
   points_subscriber
   roadmap_harness
   random_points
+  voronoi_points
 )
 
 add_library(${PROJECT_NAME}_lib SHARED

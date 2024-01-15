@@ -61,7 +61,7 @@ public:
                 "/obstacles", qos, std::bind(&RoadmapHarness::obstacles_callback, this, _1));
         victims_subscription_ = this->create_subscription<obstacles_msgs::msg::ObstacleArrayMsg>(
                 "/victims", qos, std::bind(&RoadmapHarness::victims_callback, this, _1));
-
+    
         publisher_rviz = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/roadmap", qos);
         publisher_roadmap = this->create_publisher<planning_msgs::msg::RoadmapInfo>("/roadmap", qos);
 
@@ -106,6 +106,7 @@ public:
                     RCLCPP_INFO(this->get_logger(), "Could not transform map to shelfino0/base_link: %s", ex.what());
                     return;
                 }
+                RCLCPP_INFO(this->get_logger(), "--------------------Hallooooooo");
 
                 planning_msgs::msg::RoadmapInfo info;
                 info.header.stamp = this->now();

@@ -236,3 +236,19 @@ bool valid_position(
   }
   return res;
 }
+
+std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg) {
+		std::vector<obstacle> obs;
+		for (auto m : msg.obstacles) {
+			obstacle_type ty;
+			if (m.type == "CYLINDER") {
+				ty = CYLINDER;
+			} else if (m.type == "BOX") {
+				ty = BOX;
+			}
+			obstacle o = {m.radius, m.x, m.y, m.dx, m.dy, ty};
+			obs.push_back(o);
+		}
+		return obs;
+	}
+  

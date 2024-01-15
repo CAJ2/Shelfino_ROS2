@@ -2,6 +2,8 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/polygon.hpp"
+#include "obstacles_msgs/msg/obstacle_array_msg.hpp"
+#include "obstacles_msgs/msg/obstacle_msg.hpp"
 
 #include "obstacle_struct.hpp"
 
@@ -93,3 +95,5 @@ bool valid_position(
   std::string map, double dx, double dy,
   const obstacle & obs, std::vector<std::vector<obstacle>> others
 );
+
+std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg);

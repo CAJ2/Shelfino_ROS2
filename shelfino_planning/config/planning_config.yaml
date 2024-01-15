@@ -1,4 +1,5 @@
 roadmap_harness:
   roadmap_services:
     - random_points
-  publish_roadmap_service: random_points
+    - voronoi_points
+  publish_roadmap_service: voronoi_points

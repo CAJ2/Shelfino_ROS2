@@ -10,6 +10,9 @@
 #include <stdint.h>
 #include <float.h>
 
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+
 #include <assert.h>
 
 #ifdef __cplusplus
@@ -190,6 +193,30 @@ struct jcv_diagram_
 #ifdef __cplusplus
 }
 #endif
+
+void relax_points(const jcv_diagram *diagram, jcv_point *points)
+{
+    const jcv_site *sites = jcv_diagram_get_sites(diagram);
+    for (int i = 0; i < diagram->numsites; ++i)
+    {
+        const jcv_site *site = &sites[i];
+        jcv_point sum = site->p;
+        int count = 1;
+
+        const jcv_graphedge *edge = site->edges;
+
+        while (edge)
+        {
+            sum.x += edge->pos[0].x;
+            sum.y += edge->pos[0].y;
+            ++count;
+            edge = edge->next;
+        }
+
+        points[site->index].x = sum.x / count;
+        points[site->index].y = sum.y / count;
+    }
+}
 
 #endif // JC_VORONOI_H
 

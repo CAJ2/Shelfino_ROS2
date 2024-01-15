@@ -21,6 +21,7 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
+#include "obstacle_struct.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -117,21 +118,6 @@ class RandomPoints : public rclcpp::Node
 		}
 		RCLCPP_INFO(this->get_logger(), "\n\n !!!!! Points spawned !!!!!!! \n\n");
     }
-
-	std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg) {
-		std::vector<obstacle> obs;
-		for (auto m : msg.obstacles) {
-			obstacle_type ty;
-			if (m.type == "CYLINDER") {
-				ty = CYLINDER;
-			} else if (m.type == "BOX") {
-				ty = BOX;
-			}
-			obstacle o = {m.radius, m.x, m.y, m.dx, m.dy, ty};
-			obs.push_back(o);
-		}
-		return obs;
-	}
 };
 
 int main(int argc, char * argv[])
