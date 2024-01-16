@@ -15,6 +15,7 @@ find_package(builtin_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(obstacles_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RoadmapEdge.msg"
@@ -22,7 +23,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RoadmapInfo.msg"
   "srv/GenRoadmap.srv"
   "action/GenRoadmap.action"
-  DEPENDENCIES builtin_interfaces geometry_msgs std_msgs obstacles_msgs
+  DEPENDENCIES builtin_interfaces geometry_msgs std_msgs obstacles_msgs nav_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

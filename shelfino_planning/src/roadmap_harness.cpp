@@ -21,12 +21,15 @@
 #include "geometry_msgs/msg/polygon.hpp"
 #include "geometry_msgs/msg/polygon_stamped.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
+#include "geometry_msgs/msg/polygon.hpp"
+#include "geometry_msgs/msg/polygon_stamped.hpp"
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
 #include "planning_msgs/msg/roadmap_info.hpp"
+#include "nav_msgs/msg/occupancy_grid.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -50,7 +53,7 @@ class RoadmapHarness : public rclcpp::Node
 {
 public:
     explicit RoadmapHarness()
-    : Node("roadmap_harness")
+    : Node("roadmap_harness", rclcpp::NodeOptions().allow_undeclared_parameters(true))
     {
         RCLCPP_INFO(this->get_logger(), "\n\n -------- NODE ACTIVATED ---------------");
 
@@ -61,7 +64,14 @@ public:
                 "/obstacles", qos, std::bind(&RoadmapHarness::obstacles_callback, this, _1));
         victims_subscription_ = this->create_subscription<obstacles_msgs::msg::ObstacleArrayMsg>(
                 "/victims", qos, std::bind(&RoadmapHarness::victims_callback, this, _1));
-    
+        sub_amcl_pose_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+            "/shelfino0/amcl_pose", qos, std::bind(&RoadmapHarness::pose_callback, this, _1)
+        );
+        borders_subscription_ = this->create_subscription<geometry_msgs::msg::Polygon>(
+            "/map_borders", qos, std::bind(&RoadmapHarness::borders_callback, this, _1));
+        occupancy_subscription_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
+            "/shelfino0/global_costmap/costmap", qos, std::bind(&RoadmapHarness::occupancy_callback, this, _1));
+
         publisher_rviz = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/roadmap", qos);
         publisher_roadmap = this->create_publisher<planning_msgs::msg::RoadmapInfo>("/roadmap", qos);
 
@@ -82,6 +92,20 @@ public:
         request->gate.obstacles = this->gates;
         request->obstacles.obstacles = this->obstacles;
         request->victims.obstacles = this->victims;
+
+        geometry_msgs::msg::TransformStamped t;
+        try {
+            t = tf_buffer_->lookupTransform("shelfino0/base_link", "map", tf2::TimePointZero);
+        } catch (const tf2::TransformException & ex) {
+            RCLCPP_INFO(this->get_logger(), "Could not transform map to shelfino0/base_link: %s", ex.what());
+            return;
+        }
+        request->robot_pose.header.stamp = t.header.stamp;
+        request->robot_pose.pose.pose.position.x = t.transform.translation.x;
+        request->robot_pose.pose.pose.position.y = t.transform.translation.y;
+        request->robot_pose.pose.pose.orientation = t.transform.rotation;
+        request->borders = this->borders;
+        request->occupancy_grid = this->occupancy_grid;
 
         this->srv_clients.erase(this->srv_clients.begin(), this->srv_clients.end());
         for (auto s : services) {
@@ -144,6 +168,9 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr gate_subscription_;
     rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr obstacles_subscription_;
     rclcpp::Subscription<obstacles_msgs::msg::ObstacleArrayMsg>::SharedPtr victims_subscription_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr sub_amcl_pose_;
+    rclcpp::Subscription<geometry_msgs::msg::Polygon>::SharedPtr borders_subscription_;
+    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr occupancy_subscription_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
@@ -152,10 +179,15 @@ private:
     std::vector<obstacles_msgs::msg::ObstacleMsg> gates;
     std::vector<obstacles_msgs::msg::ObstacleMsg> obstacles;
     std::vector<obstacles_msgs::msg::ObstacleMsg> victims;
+    geometry_msgs::msg::Polygon borders;
+    nav_msgs::msg::OccupancyGrid occupancy_grid;
 
     bool gate_ready = false;
     bool obstacles_ready = false;
     bool victims_ready = false;
+    bool pose_ready = false;
+    bool borders_ready = false;
+    bool occupancy_ready = false;
 
     void obstacles_callback(const obstacles_msgs::msg::ObstacleArrayMsg::SharedPtr msg)
     {
@@ -261,6 +293,25 @@ private:
 
     }
 
+    void pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
+        RCLCPP_INFO(this->get_logger(), "Pose (%f,%f)", msg->pose.pose.position.x, msg->pose.pose.position.x);
+
+        this->pose_ready = true;
+        this->activate_wrapper();
+    }
+
+    void borders_callback(const geometry_msgs::msg::Polygon::SharedPtr msg) {
+        this->borders = *msg;
+        this->borders_ready = true;
+        this->activate_wrapper();
+    }
+
+    void occupancy_callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
+        this->occupancy_grid = *msg;
+        this->occupancy_ready = true;
+        this->activate_wrapper();
+    }
+
     visualization_msgs::msg::Marker add_point(float x, float y, std::string service, int id) {
         // Publish markers, just for rviz
         std_msgs::msg::Header hh;
@@ -283,15 +334,26 @@ private:
         mark.scale.y = 0.3;
         mark.scale.z = 0.01;
         mark.color.a = 1.0;
-        mark.color.r = 1.0;
-        mark.color.g = 0.0;
-        mark.color.b = 1.0;
+        rclcpp::Parameter r, g, b;
+        this->get_parameter_or("roadmap_harness/" + service + "/color/r", r, rclcpp::Parameter("r", 1.0));
+        this->get_parameter_or("roadmap_harness/" + service + "/color/g", g, rclcpp::Parameter("g", 0.0));
+        this->get_parameter_or("roadmap_harness/" + service + "/color/b", b, rclcpp::Parameter("b", 1.0));
+        mark.color.r = r.as_double();
+        mark.color.g = g.as_double();
+        mark.color.b = b.as_double();
 
         return mark;
     }
 
     void activate_wrapper() {
-        if (this->gate_ready && this->obstacles_ready && this->victims_ready) {
+        if (this->gate_ready && this->obstacles_ready && this->victims_ready && this->pose_ready &&
+            this->borders_ready && this->occupancy_ready) {
+            if (!this->tf_buffer_->canTransform("shelfino0/base_link", "map", tf2::TimePointZero, 2s)) {
+                RCLCPP_ERROR(this->get_logger(), "Timed out waiting for canTransform map to shelfino0/base_link");
+                return;
+            }
+            // Unsubscribe from global costmap
+            this->occupancy_subscription_.reset();
             this->activate();
         } else {
             RCLCPP_INFO(this->get_logger(), "Waiting for infos to be ready");
