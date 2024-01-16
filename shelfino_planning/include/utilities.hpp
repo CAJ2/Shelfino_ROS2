@@ -59,6 +59,10 @@ bool overlaps(obstacle o1, obstacle o2);
  */
 bool overlaps(obstacle o1, std::vector<obstacle> obstacles);
 
+//for the edges in the random generator
+bool overlaps(double x1, double y1, double x2, double y2, const obstacle& obs);
+bool line_overlap(double x1, double y1, double x2, double y2, const std::vector<obstacle>& obstacles);
+
 /**
  * @brief It checks if the obstacle is inside the map
  * @details For the hexagon map, it checks only the main square plus the rectangles

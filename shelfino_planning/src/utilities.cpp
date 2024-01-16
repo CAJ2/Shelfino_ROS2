@@ -97,6 +97,53 @@ bool overlaps(obstacle obs1, std::vector<obstacle> obstacles){
 
 
 /**
+ * @brief Function that checks if a line segment overlaps with an obstacle
+ * 
+ * @param x1, y1 The starting point of the line segment
+ * @param x2, y2 The ending point of the line segment
+ * @param obs The obstacle to check against
+ * @return true If the line segment overlaps with the obstacle
+ * @return false If the line segment does not overlap with the obstacle
+ */
+bool overlaps(double x1, double y1, double x2, double y2, const obstacle& obs) {
+ 
+  
+  if (obs.type == obstacle_type::CYLINDER){
+   	h2d::Segment line_segment(h2d::Point2d(x1, y1), h2d::Point2d(x2, y2));
+  	h2d::Circle obs_geom(obs_to_circle(obs));
+  	return obs_geom.intersects(line_segment).size() > 0;
+  	}
+  else if (obs.type == obstacle_type::BOX){
+   	h2d::Segment line_segment(h2d::Point2d(x1, y1), h2d::Point2d(x2, y2));
+  	h2d::CPolyline obs_geom(obs_to_cpoly(obs));
+  	return obs_geom.intersects(line_segment).size() > 0;
+  	}
+  else return false;
+
+
+}
+
+/**
+ * @brief Function that checks if a line crosses any obstacle in a vector
+ * 
+ * @param x1, y1 The starting point of the line segment
+ * @param x2, y2 The ending point of the line segment
+ * @param obstacles The vector of obstacles to check against
+ * @return true If the line crosses any obstacle in the vector
+ * @return false If the line does not cross any obstacle in the vector
+ */
+bool line_overlap(double x1, double y1, double x2, double y2, const std::vector<obstacle>& obstacles) {
+  for (const auto& obs : obstacles) {
+    if (overlaps(x1, y1, x2, y2, obs)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+
+/**
  * @brief It checks if the obstacle is inside the map
  * 
  * @param obs The obstacle to check

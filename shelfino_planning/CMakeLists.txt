@@ -30,7 +30,6 @@ install(DIRECTORY launch config
 # list of nodes
 set(NODES
   static_robot_state
-  points_subscriber
   roadmap_harness
   random_points
   voronoi_points
