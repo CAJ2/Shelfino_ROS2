@@ -21,6 +21,8 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -49,13 +51,16 @@ class VoronoiPoints : public rclcpp::Node
       this->roadmap_service = this->create_service<planning_msgs::srv::GenRoadmap>("voronoi_points",
         std::bind(&VoronoiPoints::generate, this, _1, _2));
 
-        auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom2);
-
-        borders_sub_ = this->create_subscription<geometry_msgs::msg::Polygon>(
+      auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom2);
+      borders_sub_ = this->create_subscription<geometry_msgs::msg::Polygon>(
         "/map_borders",
         qos, 
         std::bind(&VoronoiPoints::listenBorders, this, std::placeholders::_1));
-	}
+      marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/voronoi_edges", qos);
+    }
+
+    int marker_id_ = 0;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
 
   private:
 	  rclcpp::Service<planning_msgs::srv::GenRoadmap>::SharedPtr roadmap_service;

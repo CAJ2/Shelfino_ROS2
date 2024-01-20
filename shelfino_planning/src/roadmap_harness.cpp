@@ -130,8 +130,7 @@ public:
                     RCLCPP_INFO(this->get_logger(), "Could not transform map to shelfino0/base_link: %s", ex.what());
                     return;
                 }
-                RCLCPP_INFO(this->get_logger(), "--------------------Hallooooooo");
-
+                
                 planning_msgs::msg::RoadmapInfo info;
                 info.header.stamp = this->now();
                 info.header.frame_id = "map";

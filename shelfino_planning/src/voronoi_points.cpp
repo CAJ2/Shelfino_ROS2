@@ -68,27 +68,6 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
     auto startTime = this->get_clock()->now();
     int trials = 0;
 
-
-    //jcv_point_ * clipPoints = (jcv_point_*)malloc(sizeof(jcv_point_) * 6);
-
-    // uint8_t i = 0;
-    // for(auto point : borders_.points)
-    // {
-    //     if(point.x > maxX)
-    //         maxX = point.x;
-    //     if(point.x < minX)
-    //         minX = point.x;
-    //     if(point.y > maxY)
-    //         maxY = point.y;
-    //     if(point.y < minY)
-    //         minY = point.y;
-    //     clipPoints[i].x = point.x;
-    //     clipPoints[i].y = point.y;
-    //     i++;
-    // }
-
-    //jcv_clipping_polygon_ clipPoly;
-    //jcv_clipper_* clipper;
     jcv_point_* points;
 
     int numOfPoints = 6; //number of boarder points
@@ -169,56 +148,65 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
             RCLCPP_ERROR(this->get_logger(), "Obstacle type not supported");
         }
     }
-    
 
-    // if(clipPoints)
-    // {
-    //     clipPoly.num_points = 6;
-    //     clipPoly.points = clipPoints;
-    //     jcv_clipper polygonclipper;
-    //     polygonclipper.test_fn = jcv_clip_polygon_test_point;
-    //     polygonclipper.clip_fn = jcv_clip_polygon_clip_edge;
-    //     polygonclipper.fill_fn = jcv_clip_polygon_fill_gaps;
-    //     polygonclipper.ctx = &clipPoly;
-
-    //     clipper = &polygonclipper;
-    // }
-    // else
-    // {
-    //     clipPoly.num_points = 0;
-    //     clipPoly.points = 0;
-    // }
-
-
-    //int numOfRelaxations = 0;
+    int numOfRelaxations = 5;
 
     jcv_diagram_ diagram;
     memset(&diagram, 0, sizeof(jcv_diagram_));
 
-    // for (int i = 0; i < numOfRelaxations; ++i)
-    // {
-    //     jcv_diagram_generate(numOfPoints, (const jcv_point*)points, &rect, clipper, &diagram);
-    //     relax_points(&diagram, points);
-    // }
+    for (int i = 0; i < numOfRelaxations; ++i)
+    {
+        jcv_diagram_generate(numOfPoints, (const jcv_point*)points, &rect, nullptr, &diagram);
+        relax_points(&diagram, points);
+    }
 
     jcv_diagram_generate(numOfPoints, (const jcv_point*)points, &rect, nullptr, &diagram);
     const jcv_edge_* edge = jcv_diagram_get_edges(&diagram);
 
+    // Publish markers, just for rviz
+    std_msgs::msg::Header hh;
+    hh.stamp = this->get_clock()->now();
+    hh.frame_id = "map";
+    visualization_msgs::msg::Marker line_list;
+    line_list.header = hh;
+    line_list.ns = "voronoi_edges";
+    line_list.action = visualization_msgs::msg::Marker::ADD;
+    line_list.id = marker_id_++; // Make sure marker_id_ is initialized to 0
+    line_list.type = visualization_msgs::msg::Marker::LINE_LIST;
+    line_list.scale.x = 0.05; // Width of the lines
 
+    // Line color and alpha
+    line_list.color.r = 1.0;
+    line_list.color.g = 0.0;
+    line_list.color.b = 0.0;
+    line_list.color.a = 1.0;
     while (edge)
     {
         victim new_element{0, 0};
 
         new_element.x = edge->pos[0].x;
         new_element.y = edge->pos[0].y;
-        new_element.radius = 0.;
-        possible_waypoints.push_back(new_element);
-        // if (valid_position(map_name, 10, 10, new_element, {possible_waypoints, obstacles, gates}))
-        // {
-        //     possible_waypoints.push_back(new_element); //for the internal list of waypoints
-        // }
+        new_element.radius = 0.25;
+
+        if (valid_position(map_name, 10, 10, new_element, {possible_waypoints, obstacles, gates}))
+        {
+            possible_waypoints.push_back(new_element); //for the internal list of waypoints
+        }
+
+        geometry_msgs::msg::Point p1, p2;
+        p1.x = edge->pos[0].x;
+        p1.y = edge->pos[0].y;
+        p1.z = 0; // Set Z to 0 or appropriate value
+        p2.x = edge->pos[1].x;
+        p2.y = edge->pos[1].y;
+        p2.z = 0; // Set Z to 0 or appropriate value
+
+        line_list.points.push_back(p1);
+        line_list.points.push_back(p2);
         edge = jcv_diagram_get_next_edge(edge);
     }
+    marker_pub_->publish(line_list);
+
             RCLCPP_ERROR(this->get_logger(), "---------------%ld", possible_waypoints.size());
 
     if (overTime(this->get_clock(), startTime, 10))
