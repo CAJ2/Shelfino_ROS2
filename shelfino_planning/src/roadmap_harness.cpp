@@ -130,7 +130,7 @@ public:
                     RCLCPP_INFO(this->get_logger(), "Could not transform map to shelfino0/base_link: %s", ex.what());
                     return;
                 }
-                
+
                 planning_msgs::msg::RoadmapInfo info;
                 info.header.stamp = this->now();
                 info.header.frame_id = "map";
@@ -174,7 +174,7 @@ public:
 			}
 			
 		}
-		RCLCPP_INFO(this->get_logger(), "\n RECEIVED %i nodes and %i edges (equal number in theory) \n\n", response->roadmap.nodes.size(), response->roadmap.edges.size());
+		RCLCPP_INFO(this->get_logger(), "\n RECEIVED %li nodes and %li edges (equal number in theory) \n\n", response->roadmap.nodes.size(), response->roadmap.edges.size());
                 
                 
                 

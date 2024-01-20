@@ -24,8 +24,7 @@
 #include "planning_msgs/msg/roadmap_edge.hpp"
 #include "obstacle_struct.hpp"
 
-#include "delaunator-cpp/include/delaunator.hpp"
-//#include "/home/rob/shelfinoOur/src/shelfino_planning/src/delaunator-cpp/include/delaunator.hpp"
+#include "delaunator.hpp"
 
 
 using std::placeholders::_1;
