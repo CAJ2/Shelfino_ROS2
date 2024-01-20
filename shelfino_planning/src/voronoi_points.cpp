@@ -11,11 +11,6 @@
 #include "utilities.hpp"
 #include "voronoi_points.hpp"
 
-#define JC_VORONOI_IMPLEMENTATION
-#include "jc_voronoi.h"
-#define JC_VORONOI_CLIP_IMPLEMENTATION
-#include "jc_voronoi_clip.h"
-
 #include <functional>
 #include <memory>
 #include <string>
@@ -28,46 +23,8 @@
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
 
-void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadmap::Request> request,
-                             std::shared_ptr<planning_msgs::srv::GenRoadmap::Response> response)
+void VoronoiPoints::voronoiEdgeGeneration(const std::vector<obstacle> &obstacles)
 {
-    std::string map_name = "hexagon";
-
-    // Debugging, for seeing if all of them are caught
-    for (int i = 0; i < (int)request->obstacles.obstacles.size(); i++)
-    {
-        RCLCPP_INFO(this->get_logger(), "Obs n. %i", i);
-    }
-
-    for (int i = 0; i < (int)request->gate.obstacles.size(); i++)
-    {
-        RCLCPP_INFO(this->get_logger(), "Gate n. %i", i);
-    }
-
-    for (int i = 0; i < (int)request->victims.obstacles.size(); i++)
-    {
-        RCLCPP_INFO(this->get_logger(), "Victim n. %i", i);
-    }
-
-    std::vector<obstacle> possible_waypoints;
-
-    // First add the victims we already have
-
-    //!!The information about their value is contained in the radius of the "victims" vector,
-    // not in the "possible_waypoints", which just contains their position and distance between them
-    for (auto v : request->victims.obstacles)
-    {
-        victim vict = victim(v.x, v.y);
-        vict.radius = 0.25;
-        possible_waypoints.push_back(vict);
-    }
-
-    std::vector<obstacle> obstacles = msg_to_obstacles(request->obstacles);
-    std::vector<obstacle> gates = msg_to_obstacles(request->gate);
-
-    auto startTime = this->get_clock()->now();
-    int trials = 0;
-
     jcv_point_* points;
 
     int numOfPoints = 6; //number of boarder points
@@ -77,8 +34,8 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
         if(obstacle.type == obstacle_type::CYLINDER)
         {
             numOfPoints++;
-        }
-        else if(obstacle.type == obstacle_type::BOX)
+        } 
+        else if(obstacle.type == obstacle_type::BOX) 
         {
             numOfPoints += 4;
         }
@@ -151,7 +108,6 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
 
     int numOfRelaxations = 5;
 
-    jcv_diagram_ diagram;
     memset(&diagram, 0, sizeof(jcv_diagram_));
 
     for (int i = 0; i < numOfRelaxations; ++i)
@@ -159,8 +115,53 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
         jcv_diagram_generate(numOfPoints, (const jcv_point*)points, &rect, nullptr, &diagram);
         relax_points(&diagram, points);
     }
+}
 
-    jcv_diagram_generate(numOfPoints, (const jcv_point*)points, &rect, nullptr, &diagram);
+void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadmap::Request> request,
+                             std::shared_ptr<planning_msgs::srv::GenRoadmap::Response> response)
+{
+    std::string map_name = "hexagon";
+
+    // Debugging, for seeing if all of them are caught
+    for (int i = 0; i < (int)request->obstacles.obstacles.size(); i++)
+    {
+        RCLCPP_INFO(this->get_logger(), "Obs n. %i", i);
+    }
+
+    for (int i = 0; i < (int)request->gate.obstacles.size(); i++)
+    {
+        RCLCPP_INFO(this->get_logger(), "Gate n. %i", i);
+    }
+
+    for (int i = 0; i < (int)request->victims.obstacles.size(); i++)
+    {
+        RCLCPP_INFO(this->get_logger(), "Victim n. %i", i);
+    }
+
+    std::vector<obstacle> possible_waypoints;
+    std::vector<double> pointsForDelauney;
+
+    // First add the victims we already have
+
+    //!!The information about their value is contained in the radius of the "victims" vector,
+    // not in the "possible_waypoints", which just contains their position and distance between them
+    for (auto v : request->victims.obstacles)
+    {
+        victim vict = victim(v.x, v.y);
+        vict.radius = 0.25;
+        possible_waypoints.push_back(vict);
+        pointsForDelauney.push_back(vict.x);
+        pointsForDelauney.push_back(vict.y);
+    }
+
+    std::vector<obstacle> obstacles = msg_to_obstacles(request->obstacles);
+    std::vector<obstacle> gates = msg_to_obstacles(request->gate);
+    possible_waypoints.push_back(victim(gates[0].x, gates[0].y, 0.25));
+    pointsForDelauney.push_back(gates[0].x);    
+    pointsForDelauney.push_back(gates[0].y);
+
+    voronoiEdgeGeneration(obstacles);
+
     const jcv_edge_* edge = jcv_diagram_get_edges(&diagram);
 
     // Publish markers, just for rviz
@@ -180,43 +181,69 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
     line_list.color.g = 0.0;
     line_list.color.b = 0.0;
     line_list.color.a = 1.0;
+
     while (edge)
     {
+        RCLCPP_INFO(this->get_logger(), "Edge %f, %f", edge->pos[0].x, edge->pos[0].y);
         victim new_element{0, 0};
 
         new_element.x = edge->pos[0].x;
         new_element.y = edge->pos[0].y;
         new_element.radius = 0.25;
 
-        if (valid_position(map_name, 10, 10, new_element, {possible_waypoints, obstacles, gates}))
+        if (valid_position(map_name, 10, 10, new_element, {{}, obstacles, gates})) 
         {
             possible_waypoints.push_back(new_element); //for the internal list of waypoints
+            pointsForDelauney.push_back(new_element.x);
+            pointsForDelauney.push_back(new_element.y);
+
+            victim new_element2{0, 0};
+            new_element2.x = edge->pos[1].x;
+            new_element2.y = edge->pos[1].y;
+            new_element2.radius = 0.1;
+
+            geometry_msgs::msg::Point p1, p2;
+            p1.x = edge->pos[0].x;
+            p1.y = edge->pos[0].y;
+            p1.z = 0; // Set Z to 0 or appropriate value
+            p2.x = edge->pos[1].x;
+            p2.y = edge->pos[1].y;
+            p2.z = 0; // Set Z to 0 or appropriate value
         }
 
-        geometry_msgs::msg::Point p1, p2;
-        p1.x = edge->pos[0].x;
-        p1.y = edge->pos[0].y;
-        p1.z = 0; // Set Z to 0 or appropriate value
-        p2.x = edge->pos[1].x;
-        p2.y = edge->pos[1].y;
-        p2.z = 0; // Set Z to 0 or appropriate value
-
-        line_list.points.push_back(p1);
-        line_list.points.push_back(p2);
         edge = jcv_diagram_get_next_edge(edge);
     }
+
+    // --------- Use Delaunator to generate edges ----------
+    delaunator::Delaunator delaunator(pointsForDelauney);
+    const auto &triangles = delaunator.triangles;
+
+    for(size_t i = 0; i < triangles.size(); i += 3)
+    {
+		for (size_t j = 0; j < 3; ++j)
+        {
+            int id_starting = triangles[i + j];
+		    int id_ending = triangles[i + (j + 1) % 3];
+			float x1 = possible_waypoints[id_starting].x;
+			float y1 = possible_waypoints[id_starting].y;
+			float x2 = possible_waypoints[id_ending].x;
+			float y2 = possible_waypoints[id_ending].y;
+            if(!line_overlap(x1, y1, x2, y2, obstacles))
+            {
+                geometry_msgs::msg::Point p1, p2;
+                p1.x = x1;
+                p1.y = y1;
+                p1.z = 0; // Set Z to 0 or appropriate value
+                p2.x = x2;
+                p2.y = y2;
+                p2.z = 0; // Set Z to 0 or appropriate value
+                line_list.points.push_back(p1);
+                line_list.points.push_back(p2);
+            }
+        }
+    }
+
     marker_pub_->publish(line_list);
-
-            RCLCPP_ERROR(this->get_logger(), "---------------%ld", possible_waypoints.size());
-
-    if (overTime(this->get_clock(), startTime, 10))
-    {
-        RCLCPP_ERROR(this->get_logger(), "Map already filled at node n. %i after trials %i", i, trials);
-    }
-    else
-    {
-        RCLCPP_INFO(this->get_logger(), "Generated node n. %i after trials %i", i, trials);
-    }
 
     // Set the service response message
     for (auto waypoint : possible_waypoints)

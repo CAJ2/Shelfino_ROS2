@@ -23,4 +23,10 @@ struct victim : public obstacle {
     this->radius = 0.5;
     this->type = obstacle_type::CYLINDER;
   }
+  victim(double _x, double _y, double radius) : obstacle() {
+    this->x = _x;
+    this->y = _y;
+    this->radius = radius;
+    this->type = obstacle_type::CYLINDER;
+  }
 };

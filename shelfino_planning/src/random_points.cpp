@@ -108,7 +108,7 @@ class RandomPoints : public rclcpp::Node
 			}
 */
 		}
-		possible_waypoints.clear();
+		//possible_waypoints.clear();
 
 		// Set the service response message for nodes
 		for (auto o : possible_waypoints) {

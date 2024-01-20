@@ -23,6 +23,12 @@
 #include "planning_msgs/srv/gen_roadmap.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 
+#define JC_VORONOI_IMPLEMENTATION
+#include "jc_voronoi.h"
+#define JC_VORONOI_CLIP_IMPLEMENTATION
+#include "jc_voronoi_clip.h"
+#include "delaunator.hpp"
+
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -63,6 +69,9 @@ class VoronoiPoints : public rclcpp::Node
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
 
   private:
+
+    void voronoiEdgeGeneration(const std::vector<obstacle>& obstacles);
+
 	  rclcpp::Service<planning_msgs::srv::GenRoadmap>::SharedPtr roadmap_service;
 
     std::string node_namespace;
@@ -76,4 +85,5 @@ class VoronoiPoints : public rclcpp::Node
 
     geometry_msgs::msg::Polygon borders_;
 
+    jcv_diagram diagram;
 };
