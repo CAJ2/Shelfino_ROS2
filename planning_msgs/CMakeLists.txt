@@ -18,6 +18,7 @@ find_package(obstacles_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Point2D.msg"
   "msg/RoadmapEdge.msg"
   "msg/Roadmap.msg"
   "msg/RoadmapInfo.msg"
