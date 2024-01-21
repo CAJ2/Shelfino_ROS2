@@ -24,11 +24,24 @@
 #include "planning_msgs/msg/roadmap_edge.hpp"
 #include "obstacle_struct.hpp"
 
-#include "delaunator.hpp"
+//#include "delaunator.hpp"
 
 
 using std::placeholders::_1;
 using std::placeholders::_2;
+
+static const rmw_qos_profile_t rmw_qos_profile_custom2 =
+{
+  RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+  10,
+  RMW_QOS_POLICY_RELIABILITY_RELIABLE,
+  RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
+  RMW_QOS_DEADLINE_DEFAULT,
+  RMW_QOS_LIFESPAN_DEFAULT,
+  RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+  RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+  false
+};
 
 class RandomPoints : public rclcpp::Node
 {
@@ -38,10 +51,24 @@ class RandomPoints : public rclcpp::Node
     {
 		this->roadmap_service = this->create_service<planning_msgs::srv::GenRoadmap>("random_points",
 			std::bind(&RandomPoints::generate, this, _1, _2));
+
+		auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom2);
+		// Create listener node of type PoseWithCovarianceStamped on /shelfino0/initialpose
+        auto node = rclcpp::Node::make_shared("listen_initPose");
+        auto sub = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/shelfino0/initialpose", 
+        qos,
+          [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg){
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "I heard: [%f, %f]", msg->pose.pose.position.x, msg->pose.pose.position.y);
+            initialPose.pose.pose.position.x = msg->pose.pose.position.x;
+            initialPose.pose.pose.position.y = msg->pose.pose.position.y;
+          }
+        );
 	}
 
   private:
 	rclcpp::Service<planning_msgs::srv::GenRoadmap>::SharedPtr roadmap_service;
+
+	geometry_msgs::msg::PoseWithCovarianceStamped initialPose;
 
     void generate(const std::shared_ptr<planning_msgs::srv::GenRoadmap::Request> request,
 		std::shared_ptr<planning_msgs::srv::GenRoadmap::Response> response) {
@@ -59,6 +86,7 @@ class RandomPoints : public rclcpp::Node
 		std::uniform_real_distribution<> y_dis(-DY, DY);
 
 		std::vector<obstacle> possible_waypoints;
+		possible_waypoints.push_back(victim(initialPose.pose.pose.position.x, initialPose.pose.pose.position.y, radius_of_distance));
 
 		//First add the victims we already have
 
@@ -97,7 +125,6 @@ class RandomPoints : public rclcpp::Node
 				if (valid_position(map_name, DX, DY, new_element, {possible_waypoints, obstacles, gates})) {
 					possible_waypoints.push_back(new_element); //for the internal list of waypoints
 					break;
-
 				}
 			} while(!overTime(this->get_clock(), startTime, 10)); //Once it takes more than 10 seconds of trials it stops and exits
 /*
@@ -108,66 +135,15 @@ class RandomPoints : public rclcpp::Node
 			}
 */
 		}
-		//possible_waypoints.clear();
+		possible_waypoints.clear();
 
-		// Set the service response message for nodes
-		for (auto o : possible_waypoints) {
-			geometry_msgs::msg::Point point;
+		planning_msgs::msg::Roadmap roadmap = createGraphEdges(possible_waypoints, obstacles);
 
-			point.x = o.x;
-			point.y = o.y;
-			point.z = 0.0;
-			response->roadmap.nodes.push_back(point);
+		for(auto edge : roadmap.edges){
+			response->roadmap.edges.push_back(edge);
 		}
-		
-		
-		// --------- Use Delaunator to generate edges ----------
-		std::vector<double> coords;
-		for (const auto &o : possible_waypoints)
-		{
-		    coords.push_back(o.x);
-		    coords.push_back(o.y);
-		}
-
-		delaunator::Delaunator delaunator(coords);
-		const auto &triangles = delaunator.triangles;
-		
-		// Creating empty first
-		for (size_t i = 0; i < response->roadmap.nodes.size(); i++){
-			planning_msgs::msg::RoadmapEdge empty_edge;
-			response->roadmap.edges.push_back(empty_edge);
-		}
-		
-		//Assigning the ids
-		for (size_t i = 0; i < triangles.size(); i += 3)
-		{
-		    for (size_t j = 0; j < 3; ++j)
-		    {
-		    	//check if it crosses an obstacle
-		    	int id_starting = triangles[i + j];
-		    	int id_ending = triangles[i + (j + 1) % 3];
-			float x1 = response->roadmap.nodes[id_starting].x;
-			float y1 = response->roadmap.nodes[id_starting].y;
-			float x2 = response->roadmap.nodes[id_ending].x;
-			float y2 = response->roadmap.nodes[id_ending].y;
-			
-			if (!line_overlap(x1, y1, x2, y2, {obstacles}))
-				{
-				    // Check if the edge doesn't already exist
-				    if (std::find(response->roadmap.edges[id_starting].node_ids.begin(),
-						  response->roadmap.edges[id_starting].node_ids.end(), id_ending) ==
-					response->roadmap.edges[id_starting].node_ids.end())
-				    {
-					// Add connection from starting node to ending node
-					response->roadmap.edges[id_starting].node_ids.push_back(id_ending);
-
-					// Add connection from ending node to starting node
-					response->roadmap.edges[id_ending].node_ids.push_back(id_starting);
-				    }
-				}
-
-		    }
-
+		for(auto node : roadmap.nodes){
+			response->roadmap.nodes.push_back(node);
 		}
 
 		RCLCPP_INFO(this->get_logger(), "\n\n !!!!! Random Points spawned !!!!!!! \n\n");

@@ -4,8 +4,11 @@
 #include "geometry_msgs/msg/polygon.hpp"
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
+#include "planning_msgs/msg/roadmap.hpp"
+#include "planning_msgs/msg/roadmap_edge.hpp"
 
 #include "obstacle_struct.hpp"
+
 
 #include "../../map_pkg/include/geometry/homog2d.hpp"
 
@@ -101,3 +104,5 @@ bool valid_position(
 );
 
 std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg);
+
+planning_msgs::msg::Roadmap createGraphEdges(const std::vector<obstacle>& possible_waypoints, const std::vector<obstacle>& obstacles);

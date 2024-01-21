@@ -1,4 +1,10 @@
 #include "utilities.hpp"
+#include "planning_msgs/srv/gen_roadmap.hpp"
+
+#include <vector>
+
+#include "delaunator.hpp"
+
 
 h2d::CPolyline obs_to_cpoly (const obstacle& obs){
   h2d::CPolyline poly;
@@ -298,4 +304,65 @@ std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg
 		}
 		return obs;
 	}
-  
+
+    planning_msgs::msg::Roadmap createGraphEdges(const std::vector<obstacle> &possible_waypoints, const std::vector<obstacle> &obstacles)
+    {
+        planning_msgs::msg::Roadmap roadmap;
+
+        std::vector<double> coords;
+
+        for (const auto& waypoint : possible_waypoints)
+        {
+          geometry_msgs::msg::Point point;
+
+          point.x = waypoint.x;
+          point.y = waypoint.y;
+          point.z = 0.0;
+          roadmap.nodes.push_back(point);
+          coords.push_back(waypoint.x);
+          coords.push_back(waypoint.y);
+        }
+
+        delaunator::Delaunator delaunator(coords);
+        const auto &triangles = delaunator.triangles;
+        
+        // Creating empty first
+        for (size_t i = 0; i < roadmap.nodes.size(); i++)
+        {
+          planning_msgs::msg::RoadmapEdge empty_edge;
+          roadmap.edges.push_back(empty_edge);
+        }
+
+        for (size_t i = 0; i < triangles.size(); i += 3)
+	      {
+            for (size_t j = 0; j < 3; ++j)
+            {
+              //check if it crosses an obstacle
+              int id_starting = triangles[i + j];
+              int id_ending = triangles[i + (j + 1) % 3];
+              float x1 = roadmap.nodes[id_starting].x;
+              float y1 = roadmap.nodes[id_starting].y;
+              float x2 = roadmap.nodes[id_ending].x;
+              float y2 = roadmap.nodes[id_ending].y;
+              
+              if (!line_overlap(x1, y1, x2, y2, {obstacles}))
+              {
+                  // Check if the edge doesn't already exist
+                  if (std::find(roadmap.edges[id_starting].node_ids.begin(),
+                        roadmap.edges[id_starting].node_ids.end(), id_ending) ==
+                      roadmap.edges[id_starting].node_ids.end())
+                  {
+                      // Add connection from starting node to ending node
+                      roadmap.edges[id_starting].node_ids.push_back(id_ending);
+
+                      // Add connection from ending node to starting node
+                      roadmap.edges[id_ending].node_ids.push_back(id_starting);
+                  }
+              }
+
+            }
+
+		    }
+
+        return roadmap;
+    }

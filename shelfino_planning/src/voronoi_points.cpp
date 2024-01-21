@@ -22,6 +22,8 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
+#include "planning_msgs/msg/node.hpp"
+#include "planning_msgs/msg/point2_d.hpp"
 
 void VoronoiPoints::voronoiEdgeGeneration(const std::vector<obstacle> &obstacles)
 {
@@ -122,24 +124,9 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
 {
     std::string map_name = "hexagon";
 
-    // Debugging, for seeing if all of them are caught
-    for (int i = 0; i < (int)request->obstacles.obstacles.size(); i++)
-    {
-        RCLCPP_INFO(this->get_logger(), "Obs n. %i", i);
-    }
-
-    for (int i = 0; i < (int)request->gate.obstacles.size(); i++)
-    {
-        RCLCPP_INFO(this->get_logger(), "Gate n. %i", i);
-    }
-
-    for (int i = 0; i < (int)request->victims.obstacles.size(); i++)
-    {
-        RCLCPP_INFO(this->get_logger(), "Victim n. %i", i);
-    }
-
     std::vector<obstacle> possible_waypoints;
-    std::vector<double> pointsForDelauney;
+
+    possible_waypoints.push_back(victim(initialPose.pose.pose.position.x, initialPose.pose.pose.position.y, 0.05));
 
     // First add the victims we already have
 
@@ -148,39 +135,17 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
     for (auto v : request->victims.obstacles)
     {
         victim vict = victim(v.x, v.y);
-        vict.radius = 0.25;
+        vict.radius = 0.05;
         possible_waypoints.push_back(vict);
-        pointsForDelauney.push_back(vict.x);
-        pointsForDelauney.push_back(vict.y);
     }
 
     std::vector<obstacle> obstacles = msg_to_obstacles(request->obstacles);
     std::vector<obstacle> gates = msg_to_obstacles(request->gate);
-    possible_waypoints.push_back(victim(gates[0].x, gates[0].y, 0.25));
-    pointsForDelauney.push_back(gates[0].x);    
-    pointsForDelauney.push_back(gates[0].y);
+    possible_waypoints.push_back(victim(gates[0].x, gates[0].y, 0.05));
 
     voronoiEdgeGeneration(obstacles);
 
     const jcv_edge_* edge = jcv_diagram_get_edges(&diagram);
-
-    // Publish markers, just for rviz
-    std_msgs::msg::Header hh;
-    hh.stamp = this->get_clock()->now();
-    hh.frame_id = "map";
-    visualization_msgs::msg::Marker line_list;
-    line_list.header = hh;
-    line_list.ns = "voronoi_edges";
-    line_list.action = visualization_msgs::msg::Marker::ADD;
-    line_list.id = marker_id_++; // Make sure marker_id_ is initialized to 0
-    line_list.type = visualization_msgs::msg::Marker::LINE_LIST;
-    line_list.scale.x = 0.05; // Width of the lines
-
-    // Line color and alpha
-    line_list.color.r = 1.0;
-    line_list.color.g = 0.0;
-    line_list.color.b = 0.0;
-    line_list.color.a = 1.0;
 
     while (edge)
     {
@@ -189,79 +154,31 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
 
         new_element.x = edge->pos[0].x;
         new_element.y = edge->pos[0].y;
-        new_element.radius = 0.25;
+        new_element.radius = 0.05;
 
-        if (valid_position(map_name, 10, 10, new_element, {{}, obstacles, gates})) 
+        if (valid_position(map_name, 9, 9, new_element, {possible_waypoints, obstacles, gates})) 
         {
             possible_waypoints.push_back(new_element); //for the internal list of waypoints
-            pointsForDelauney.push_back(new_element.x);
-            pointsForDelauney.push_back(new_element.y);
-
-            victim new_element2{0, 0};
-            new_element2.x = edge->pos[1].x;
-            new_element2.y = edge->pos[1].y;
-            new_element2.radius = 0.1;
-
-            geometry_msgs::msg::Point p1, p2;
-            p1.x = edge->pos[0].x;
-            p1.y = edge->pos[0].y;
-            p1.z = 0; // Set Z to 0 or appropriate value
-            p2.x = edge->pos[1].x;
-            p2.y = edge->pos[1].y;
-            p2.z = 0; // Set Z to 0 or appropriate value
         }
 
         edge = jcv_diagram_get_next_edge(edge);
     }
+    //possible_waypoints.clear();
+    planning_msgs::msg::Roadmap roadmap = createGraphEdges(possible_waypoints, obstacles);
+		
+	for(auto edge : roadmap.edges){
+		response->roadmap.edges.push_back(edge);
+	}
+	for(auto node : roadmap.nodes){
+		response->roadmap.nodes.push_back(node);
+	}
 
-    // --------- Use Delaunator to generate edges ----------
-    delaunator::Delaunator delaunator(pointsForDelauney);
-    const auto &triangles = delaunator.triangles;
-
-    for(size_t i = 0; i < triangles.size(); i += 3)
-    {
-		for (size_t j = 0; j < 3; ++j)
-        {
-            int id_starting = triangles[i + j];
-		    int id_ending = triangles[i + (j + 1) % 3];
-			float x1 = possible_waypoints[id_starting].x;
-			float y1 = possible_waypoints[id_starting].y;
-			float x2 = possible_waypoints[id_ending].x;
-			float y2 = possible_waypoints[id_ending].y;
-            if(!line_overlap(x1, y1, x2, y2, obstacles))
-            {
-                geometry_msgs::msg::Point p1, p2;
-                p1.x = x1;
-                p1.y = y1;
-                p1.z = 0; // Set Z to 0 or appropriate value
-                p2.x = x2;
-                p2.y = y2;
-                p2.z = 0; // Set Z to 0 or appropriate value
-                line_list.points.push_back(p1);
-                line_list.points.push_back(p2);
-            }
-        }
-    }
-
-    marker_pub_->publish(line_list);
-
-    // Set the service response message
-    for (auto waypoint : possible_waypoints)
-    {
-        geometry_msgs::msg::Point point;
-
-        point.x = waypoint.x;
-        point.y = waypoint.y;
-        point.z = 0.0;
-        response->roadmap.nodes.push_back(point);
-        RCLCPP_INFO(this->get_logger(), "Generated node n. %f, %f", waypoint.x, waypoint.y);
-    }
     RCLCPP_INFO(this->get_logger(), "\n\n !!!!! Points spawned !!!!!!! \n\n");
 }
 
 void VoronoiPoints::listenBorders(const geometry_msgs::msg::Polygon::SharedPtr msg)
 {
-    RCLCPP_INFO(this->get_logger(), "------------------------------------------------------Received borders");
+    RCLCPP_INFO(this->get_logger(), "------------------Received borders");
     borders_ = *msg;
 }
 

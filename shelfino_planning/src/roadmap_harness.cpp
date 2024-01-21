@@ -158,26 +158,23 @@ public:
                 
                 //Here for the edges 
                 int id = response->roadmap.nodes.size();
-		for (size_t i = 0; i < response->roadmap.edges.size(); i++) {
-			auto nodes = response->roadmap.edges[i].node_ids;
-			
-			for(uint node_id : nodes){
-				// Edge is intended that the index of the edge in the list is the id 
-				// of the starting node, and the list contains the connected nodes ids
-				float x1 = response->roadmap.nodes[i].x;
-				float y1 = response->roadmap.nodes[i].y;
-				float x2 = response->roadmap.nodes[node_id].x;
-				float y2 = response->roadmap.nodes[node_id].y;
-				visualization_msgs::msg::Marker mark = add_line( x1, y1, x2, y2, s, id);
-				marks.markers.push_back(mark);
-				id++;
-			}
-			
-		}
-		RCLCPP_INFO(this->get_logger(), "\n RECEIVED %li nodes and %li edges (equal number in theory) \n\n", response->roadmap.nodes.size(), response->roadmap.edges.size());
-                
-                
-                
+                for (size_t i = 0; i < response->roadmap.edges.size(); i++) {
+                    auto nodes = response->roadmap.edges[i].node_ids;
+                    
+                    for(uint node_id : nodes){
+                        // Edge is intended that the index of the edge in the list is the id 
+                        // of the starting node, and the list contains the connected nodes ids
+                        float x1 = response->roadmap.nodes[i].x;
+                        float y1 = response->roadmap.nodes[i].y;
+                        float x2 = response->roadmap.nodes[node_id].x;
+                        float y2 = response->roadmap.nodes[node_id].y;
+                        visualization_msgs::msg::Marker mark = add_line( x1, y1, x2, y2, s, id);
+                        marks.markers.push_back(mark);
+                        id++;
+                    }
+                    
+                }
+                RCLCPP_INFO(this->get_logger(), "\n RECEIVED %li nodes and %li edges (equal number in theory) \n\n", response->roadmap.nodes.size(), response->roadmap.edges.size());
                 
                 this->publisher_rviz->publish(marks);
             };
@@ -384,26 +381,25 @@ private:
         mark.action = visualization_msgs::msg::Marker::ADD;
         mark.type = visualization_msgs::msg::Marker::LINE_STRIP;
 
-	geometry_msgs::msg::Point start_point;
-	start_point.x = x1;
-	start_point.y = y1;
-	start_point.z = 0.0;
+        geometry_msgs::msg::Point start_point;
+        start_point.x = x1;
+        start_point.y = y1;
+        start_point.z = 0.0;
 
-	geometry_msgs::msg::Point end_point;
-	end_point.x = x2;
-	end_point.y = y2;
-	end_point.z = 0.0;
+        geometry_msgs::msg::Point end_point;
+        end_point.x = x2;
+        end_point.y = y2;
+        end_point.z = 0.0;
 
-	mark.points.push_back(start_point);
-	mark.points.push_back(end_point);
-        
+        mark.points.push_back(start_point);
+        mark.points.push_back(end_point);
+            
         mark.scale.x = 0.03; //line width
         
         mark.color.a = 0.5;
         mark.color.r = 0.0;
         mark.color.g = 0.0;
         mark.color.b = 1.0;
-
         return mark;
     }
     void activate_wrapper() {

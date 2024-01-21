@@ -27,8 +27,6 @@
 #include "jc_voronoi.h"
 #define JC_VORONOI_CLIP_IMPLEMENTATION
 #include "jc_voronoi_clip.h"
-#include "delaunator.hpp"
-
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -52,17 +50,28 @@ class VoronoiPoints : public rclcpp::Node
     VoronoiPoints()
     : Node("voronoi_points")
     {
-      this->node_namespace = this->get_namespace();
+        this->node_namespace = this->get_namespace();
 
-      this->roadmap_service = this->create_service<planning_msgs::srv::GenRoadmap>("voronoi_points",
-        std::bind(&VoronoiPoints::generate, this, _1, _2));
+        this->roadmap_service = this->create_service<planning_msgs::srv::GenRoadmap>("voronoi_points",
+          std::bind(&VoronoiPoints::generate, this, _1, _2));
 
-      auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom2);
-      borders_sub_ = this->create_subscription<geometry_msgs::msg::Polygon>(
-        "/map_borders",
-        qos, 
-        std::bind(&VoronoiPoints::listenBorders, this, std::placeholders::_1));
-      marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/voronoi_edges", qos);
+        auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom2);
+        borders_sub_ = this->create_subscription<geometry_msgs::msg::Polygon>(
+          "/map_borders",
+          qos, 
+          std::bind(&VoronoiPoints::listenBorders, this, std::placeholders::_1));
+        marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/voronoi_edges", qos);
+
+        // Create listener node of type PoseWithCovarianceStamped on /shelfino0/initialpose
+        auto node = rclcpp::Node::make_shared("listen_initPose");
+        auto sub = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/shelfino0/initialpose", 
+        qos,
+          [this](const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg){
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "I heard: [%f, %f]", msg->pose.pose.position.x, msg->pose.pose.position.y);
+            initialPose.pose.pose.position.x = msg->pose.pose.position.x;
+            initialPose.pose.pose.position.y = msg->pose.pose.position.y;
+          }
+        );
     }
 
     int marker_id_ = 0;
@@ -86,4 +95,6 @@ class VoronoiPoints : public rclcpp::Node
     geometry_msgs::msg::Polygon borders_;
 
     jcv_diagram diagram;
+
+    geometry_msgs::msg::PoseWithCovarianceStamped initialPose;
 };
