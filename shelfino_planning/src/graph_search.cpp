@@ -1,45 +1,8 @@
 #include "graph_search.hpp"
 
-
-visualization_msgs::msg::Marker GraphSearch::add_line(float x1, float y1, float x2, float y2, std::string service, int id) {
-        // Publish markers, just for rviz
-        std_msgs::msg::Header hh;
-        hh.stamp = this->get_clock()->now();
-        hh.frame_id = "map";
-
-        visualization_msgs::msg::Marker mark;
-
-        mark.header = hh;
-        mark.ns = service;
-        mark.id = id;
-        mark.action = visualization_msgs::msg::Marker::ADD;
-        mark.type = visualization_msgs::msg::Marker::LINE_STRIP;
-
-        geometry_msgs::msg::Point start_point;
-        start_point.x = x1;
-        start_point.y = y1;
-        start_point.z = 0.0;
-
-        geometry_msgs::msg::Point end_point;
-        end_point.x = x2;
-        end_point.y = y2;
-        end_point.z = 0.0;
-
-        mark.points.push_back(start_point);
-        mark.points.push_back(end_point);
-            
-        mark.scale.x = 0.03; //line width
-        
-        mark.color.a = 0.5;
-        mark.color.r = 0.0;
-        mark.color.g = 0.0;
-        mark.color.b = 1.0;
-        return mark;
-    }
-
 void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg)
 {
-    RCLCPP_INFO(this->get_logger(), "Roadmap received");
+    RCLCPP_INFO(this->get_logger(), "/*/*/***/*-----------------Roadmap received-----------------");
 
     planning_msgs::msg::RoadmapInfo roadmapInfo = *msg;
 
@@ -52,12 +15,13 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
         graph_search::Node node(i);
         node.position.x = roadmapInfo.roadmap.nodes[i].x;
         node.position.y = roadmapInfo.roadmap.nodes[i].y;
+        
         for(auto& n : nodes)
         {
             node.neighbors.push_back(n);
         }
 
-        allNodes.insert(std::pair<int, graph_search::Node>(node.nodeID, node));
+        allNodes.push_back(node);
 
         if(node.position.x == roadmapInfo.gate.position.x && node.position.y == roadmapInfo.gate.position.y)
         {
@@ -69,7 +33,14 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
         }
     }
 
+    RCLCPP_INFO(this->get_logger(), "Start node: %d", startNodeID);
+    RCLCPP_INFO(this->get_logger(), "Goal node: %d", goalNodeID);
+    RCLCPP_INFO(this->get_logger(), "Start position: %f, %f", allNodes[startNodeID].position.x, allNodes[startNodeID].position.y);
+    RCLCPP_INFO(this->get_logger(), "Goal position: %f, %f", allNodes[goalNodeID].position.x, allNodes[goalNodeID].position.y);
+
     AStarSearch(startNodeID, goalNodeID);
+
+    visualizePath();
 
     return;
 }
@@ -78,61 +49,140 @@ void GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
 {
     RCLCPP_INFO(this->get_logger(), "Starting A* search");
 
-    path.clear();
+    graph_search::Node startNode = allNodes[startNodeID];
+    graph_search::Node goalNode = allNodes[goalNodeID];
 
-    graph_search::Node* startNode = &allNodes[startNodeID];
-    graph_search::Node* goalNode = &allNodes[goalNodeID];
+    for(auto& id : startNode.neighbors)
+    {
+        RCLCPP_INFO(this->get_logger(), "Start node neighbor: %d", id);
+    }
 
-    startNode -> gCost = 0;
-    startNode -> computeHeuristic(*goalNode);
-    openSet.push(*startNode);
+    startNode.gCost = 0;
+    startNode.computeHeuristic(goalNode, {0});
+    startNode.gCost = 0.0;
+    openSet.insert(startNode);
 
     while(!openSet.empty())
     {
-        graph_search::Node currentNode = openSet.top();
-        openSet.pop();
+        graph_search::Node currentNode = *openSet.begin();
+        openSet.erase(currentNode);
 
-        if(currentNode == *goalNode)
+        if(currentNode == goalNode)
         {
             RCLCPP_INFO(this->get_logger(), "Goal reached");
-            return;
+            reconstructPath(currentNode, startNode);
+            break;
         }
 
-        closedSet.insert(std::pair<int, graph_search::Node>(currentNode.nodeID, currentNode));
+        closedSet.push_back(currentNode);
 
         for(auto& neighborID : currentNode.neighbors)
         {
-            graph_search::Node* neighbor = &allNodes[neighborID];
+            graph_search::Node neighbor = allNodes[neighborID];
 
-            if(closedSet.find(neighborID) != closedSet.end())
+            if((std::find(closedSet.begin(), closedSet.end(), neighbor) != closedSet.end()))
             {
                 continue;
             }
 
-            double tentativeGCost = currentNode.gCost + graph_search::distance(currentNode.position, neighbor->position);
+            neighbor.computeHeuristic(goalNode, currentNode);
+            auto it = openSet.find(neighbor);
 
-            if(tentativeGCost < neighbor->gCost)
+            bool isInOpenSet = false;
+            for(auto& node : openSet)
             {
-                neighbor->parent = &currentNode;
-                neighbor->gCost = tentativeGCost;
-                neighbor->computeHeuristic(*goalNode);
-
-                if(std::find(openSetTracker.begin(), openSetTracker.end(), neighbor) == openSetTracker.end())
+                if(node.nodeID == neighbor.nodeID)
                 {
-                    openSet.push(*neighbor);
-                    openSetTracker.insert(neighborID);
+                    isInOpenSet = true;
+                    break;
                 }
+            }
+
+            if(!isInOpenSet)
+            {
+                neighbor.parentID = currentNode.nodeID;
+                openSet.insert(neighbor);
+                allNodes[neighbor.nodeID].parentID = neighbor.parentID;
+            } else if(neighbor.gCost < it->gCost)
+            {
+                openSet.erase(it);
+                neighbor.parentID = currentNode.nodeID;
+                openSet.insert(neighbor);
+                allNodes[neighbor.nodeID].parentID = neighbor.parentID;
             }
         }
     }   
+    return;
 }
 
-void GraphSearch::reconstructPath(graph_search::Node* current)
+void GraphSearch::reconstructPath(const graph_search::Node& goal, const graph_search::Node& start)
 {
-    while(current != nullptr)
+    path.clear();
+
+    graph_search::Node node = goal;
+
+    int i = 0;
+    while(node.nodeID != start.nodeID && i < 15)
     {
-        path.push_back(*current);
-        current = current->parent;
+        path.push_back(node);
+        node = allNodes[node.parentID];
+        i++;
     }
+
+    path.push_back(start);
+
     std::reverse(path.begin(), path.end());
+}
+
+void GraphSearch::visualizePath()
+{
+    RCLCPP_INFO(this->get_logger(), "Visualizing path");
+
+    // Publish markers, just for rviz
+    std_msgs::msg::Header hh;
+    hh.stamp = this->get_clock()->now();
+    hh.frame_id = "map";
+
+    visualization_msgs::msg::Marker line_list;
+
+    line_list.header = hh;
+    line_list.ns = "graph_search";
+    line_list.action = visualization_msgs::msg::Marker::ADD;
+    line_list.id = 0; // Make sure marker_id_ is initialized to 0
+    line_list.type = visualization_msgs::msg::Marker::LINE_LIST;
+    line_list.scale.x = 0.2; // Width of the lines
+
+    // Line color and alpha
+    line_list.color.r = 1.0;
+    line_list.color.g = 0.0;
+    line_list.color.b = 0.0;
+    line_list.color.a = 1.0;
+
+    for(int i = 0; i < (int)path.size() - 1; i++)
+    {
+        RCLCPP_INFO(this->get_logger(), "//Path node: %d, x: %f, y: %f", path[i].nodeID, path[i].position.x, path[i].position.y);
+        geometry_msgs::msg::Point p1, p2;
+
+        p1.x = path[i].position.x;
+        p1.y = path[i].position.y;
+        p1.z = 0.0;
+        p2.x = path[i+1].position.x;
+        p2.y = path[i+1].position.y;
+        p2.z = 0.0;
+
+        line_list.points.push_back(p1);
+        line_list.points.push_back(p2);
+    }
+
+    marker_pub_->publish(line_list);
+
+    RCLCPP_INFO(this->get_logger(), "Path published");
+}
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<GraphSearch>());
+  rclcpp::shutdown();
+  return 0;
 }

@@ -22,7 +22,6 @@
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "planning_msgs/srv/gen_roadmap.hpp"
-#include "planning_msgs/msg/node.hpp"
 #include "planning_msgs/msg/point2_d.hpp"
 
 void VoronoiPoints::voronoiEdgeGeneration(const std::vector<obstacle> &obstacles)
@@ -163,7 +162,7 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
 
         edge = jcv_diagram_get_next_edge(edge);
     }
-    //possible_waypoints.clear();
+    possible_waypoints.clear();
     planning_msgs::msg::Roadmap roadmap = createGraphEdges(possible_waypoints, obstacles);
 		
 	for(auto edge : roadmap.edges){

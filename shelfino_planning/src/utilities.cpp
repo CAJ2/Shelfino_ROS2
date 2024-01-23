@@ -345,7 +345,7 @@ std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg
               float x2 = roadmap.nodes[id_ending].x;
               float y2 = roadmap.nodes[id_ending].y;
               
-              if (!line_overlap(x1, y1, x2, y2, {obstacles}))
+              if (!line_overlap(x1, y1, x2, y2, {obstacles})) //|| (x1 == 0.0 && y1 == 0.0) || (x2 == 0.0 && y2 == 0.0))
               {
                   // Check if the edge doesn't already exist
                   if (std::find(roadmap.edges[id_starting].node_ids.begin(),
@@ -359,7 +359,6 @@ std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg
                       roadmap.edges[id_ending].node_ids.push_back(id_starting);
                   }
               }
-
             }
 
 		    }

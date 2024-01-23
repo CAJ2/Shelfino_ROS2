@@ -105,12 +105,6 @@ class RandomPoints : public rclcpp::Node
 		victim gate = victim(gates[0].x, gates[0].y);
 		gate.radius = radius_of_distance;
 		possible_waypoints.push_back(gate);
-		
-		//Add the initial position as a waypoint (is it always 0,0 ?)
-		victim initial = victim(0, 0);
-		initial.radius = radius_of_distance;
-		possible_waypoints.push_back(initial);
-
 
 		auto startTime = this->get_clock()->now();
 		int trials = 0;
@@ -135,7 +129,7 @@ class RandomPoints : public rclcpp::Node
 			}
 */
 		}
-		possible_waypoints.clear();
+		//possible_waypoints.clear();
 
 		planning_msgs::msg::Roadmap roadmap = createGraphEdges(possible_waypoints, obstacles);
 

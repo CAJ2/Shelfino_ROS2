@@ -64,6 +64,12 @@ def generate_launch_description():
             output='screen',
             parameters=[planning_config['roadmap_harness']]
         ),
+        Node (
+            package='shelfino_planning',
+            executable='graph_search',
+            name='graph_search',
+            output='screen',
+        ),
     ]
 
     # Launch configured roadmap services

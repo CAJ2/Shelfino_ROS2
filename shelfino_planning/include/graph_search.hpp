@@ -18,6 +18,7 @@
 #include <string>
 #include <queue>
 #include <map>
+#include <set>
 
 #include "geometry_msgs/msg/point32.hpp"
 #include "geometry_msgs/msg/polygon.hpp"
@@ -59,10 +60,6 @@ struct CompareNode : public std::binary_function<Node*, Node*, bool> {
     }
 };
 
-using NodeQueue = std::priority_queue<Node, std::vector<Node>, CompareNode>;
-using NodeMap = std::map<int, Node>; // Map of nodeID to Node pointer
-
-
 class GraphSearch : public rclcpp::Node
 {
 public:
@@ -76,24 +73,24 @@ public:
         roadmap_subscription_ = this->create_subscription<planning_msgs::msg::RoadmapInfo>(
                 "/roadmap", qos, std::bind(&GraphSearch::roadmapCallback, this, _1));
 
-        publisher_rviz = this->create_publisher<visualization_msgs::msg::MarkerArray>("/markers/graph_path", qos);
+        marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/graph_search", qos);
     }
 
 private:
 
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_rviz;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;    
     rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;    
 
-    NodeQueue openSet;
-    NodeMap closedSet;
-    NodeMap allNodes;
+    std::set<graph_search::Node, std::less<graph_search::Node>> openSet;
+    std::vector<graph_search::Node> closedSet;
+    std::vector<graph_search::Node> allNodes;
     std::unordered_set<int> openSetTracker; // Track nodes in the open set
     std::vector<graph_search::Node> path;
 
     bool isRoadmapGenerated = false;
     
-    visualization_msgs::msg::Marker add_line(float x1, float y1, float x2, float y2, std::string service, int id);
     void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
     void AStarSearch(int startNodeID, int goalNodeID);
-    void reconstructPath(graph_search::Node* current);
+    void reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
+    void visualizePath();
 };
