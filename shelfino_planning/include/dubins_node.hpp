@@ -68,6 +68,8 @@ public:
 
         graph_path_subscription_ = this->create_subscription<planning_msgs::msg::GraphPath>(
                 "/graph_path", qos, std::bind(&DubinsPathGenerator::graphPathCallback, this, _1));
+        roadmap_subscription_ = this->create_subscription<planning_msgs::msg::RoadmapInfo>(
+                "/roadmap", qos, std::bind(&DubinsPathGenerator::roadmapCallback, this, _1));
 
         marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/graph_search", qos);
      //   publisher_graph_path_ = this->create_publisher<planning_msgs::msg::GraphPath>("/graph_path", qos);
@@ -77,10 +79,13 @@ private:
 
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;    
     rclcpp::Subscription<planning_msgs::msg::GraphPath>::SharedPtr graph_path_subscription_;
+    rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;
   //  rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_graph_path_;   
 
-    std::vector<graph::Edge> graphEdges;
+    std::vector<graph::Edge> obstacleEdges;
+    planning_msgs::msg::RoadmapInfo roadmapInfo;
 
+    void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
     void graphPathCallback(const planning_msgs::msg::GraphPath::SharedPtr msg);
     void visualizePath();
     void publishPath();

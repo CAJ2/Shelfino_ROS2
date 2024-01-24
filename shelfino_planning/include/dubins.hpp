@@ -231,7 +231,7 @@ namespace dubins
        * @param numberOfPoints The number of points provided
        * @return double* Array of optimal angles
        */
-      double *multipointShortestPathAngles(DubinsPoint **points, unsigned int numberOfPoints, graph::Graph &graph);
+      double *multipointShortestPathAngles(DubinsPoint **points, unsigned int numberOfPoints, std::vector<graph::Edge> &edges);
 
    public:
       /**
@@ -273,7 +273,7 @@ namespace dubins
        * @param edges All obstacles' edges
        * @return DubinsCurve* Resulting curve representing the shortest path
        */
-      DubinsCurve *findShortestPathCollisionDetection(double x0, double y0, double th0, double xf, double yf, double thf, graph::Graph &graph);
+      DubinsCurve *findShortestPathCollisionDetection(double x0, double y0, double th0, double xf, double yf, double thf, std::vector<graph::Edge> &edges);
 
       /**
        * @brief Calculate the multipoint shortest path
@@ -282,7 +282,7 @@ namespace dubins
        * @param numberOfPoints Number of points we have
        * @return DubinsCurve** Array of DubinsCurves
        */
-      DubinsCurve **multipointShortestPath(DubinsPoint **points, unsigned int numberOfPoints, graph::Graph &graph);
+      DubinsCurve **multipointShortestPath(DubinsPoint **points, unsigned int numberOfPoints, std::vector<graph::Edge> &edges);
 
       /**
        * @brief Find if there is an intersection between a circle and a segment

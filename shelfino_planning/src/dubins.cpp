@@ -325,9 +325,8 @@ namespace dubins
      * @param edges All obstacles' edges
      * @return DubinsCurve* Resulting curve representing the shortest path
      */
-    DubinsCurve *Dubins::findShortestPathCollisionDetection(double x0, double y0, double th0, double xf, double yf, double thf, graph::Graph &graph)
+    DubinsCurve *Dubins::findShortestPathCollisionDetection(double x0, double y0, double th0, double xf, double yf, double thf, std::vector<graph::Edge>& edges)
     {
-        std::vector<graph::Edge> edges = graph.getEdges();
         ParametersResult *scaled_parameters = scaleToStandard(x0, y0, th0, xf, yf, thf);
 
         DubinsCurve *curve = nullptr;
@@ -452,7 +451,7 @@ namespace dubins
      * @param numberOfPoints The number of points provided
      * @return DubinsCurve** Resulting array of curves that together represent the shortest path
      */
-    double *Dubins::multipointShortestPathAngles(DubinsPoint **points, unsigned int numberOfPoints, graph::Graph &graph)
+    double *Dubins::multipointShortestPathAngles(DubinsPoint **points, unsigned int numberOfPoints, std::vector<graph::Edge>& edges)
     {
         // std::cout << "INPUT WITH " << numberOfPoints << " POINTS: \n";
         // std::cout << "X\tY\tTHETA\n";
@@ -518,7 +517,7 @@ namespace dubins
         bool isThereAPath = false;
         for (unsigned int i = 0; i < K; i++)
         {
-            DubinsCurve *curve = findShortestPathCollisionDetection(points[numberOfPoints - 2]->x, points[numberOfPoints - 2]->y, multipointAngles[i], points[numberOfPoints - 1]->x, points[numberOfPoints - 1]->y, points[numberOfPoints - 1]->th, graph);
+            DubinsCurve *curve = findShortestPathCollisionDetection(points[numberOfPoints - 2]->x, points[numberOfPoints - 2]->y, multipointAngles[i], points[numberOfPoints - 1]->x, points[numberOfPoints - 1]->y, points[numberOfPoints - 1]->th, edges);
             if (curve != nullptr) {
                 isThereAPath = true;
                 if (L[numberOfPoints - 2][i] == -1 || L[numberOfPoints - 2][i] > curve->L)
@@ -545,7 +544,7 @@ namespace dubins
                 for (unsigned int j = 0; j < K; j++)
                 {
                     if (L[n+1][j] != INFINITY) {
-                        DubinsCurve *curve = findShortestPathCollisionDetection(points[n]->x, points[n]->y, multipointAngles[i], points[n + 1]->x, points[n + 1]->y, multipointAngles[j], graph);
+                        DubinsCurve *curve = findShortestPathCollisionDetection(points[n]->x, points[n]->y, multipointAngles[i], points[n + 1]->x, points[n + 1]->y, multipointAngles[j], edges);
                         if (curve != nullptr) {
                             if (L[n][i] > curve->L + L[n + 1][j] || L[n][i] == -1)
                             {
@@ -646,7 +645,7 @@ namespace dubins
      * @param numberOfPoints Number of points we have
      * @return DubinsCurve** Array of DubinsCurves
      */
-    DubinsCurve **Dubins::multipointShortestPath(DubinsPoint **points, unsigned int numberOfPoints, graph::Graph &graph)
+    DubinsCurve **Dubins::multipointShortestPath(DubinsPoint **points, unsigned int numberOfPoints, std::vector<graph::Edge> &edges)
     {
         if (numberOfPoints > 1) {
             DubinsPoint **newPoints = new DubinsPoint*[numberOfPoints];
@@ -655,7 +654,7 @@ namespace dubins
             }
             newPoints[numberOfPoints-1]->th = mod2pi(points[0]->th + M_PI);
             // Get the optimal angles for each point (dynamic programming iterative procedure)
-            double *angles = multipointShortestPathAngles(newPoints, numberOfPoints, graph);
+            double *angles = multipointShortestPathAngles(newPoints, numberOfPoints, edges);
             if (angles == nullptr) {
                 delete[] newPoints;
                 return nullptr;
@@ -665,7 +664,7 @@ namespace dubins
             DubinsCurve **curves = new DubinsCurve*[numberOfPoints-1];
             for (int i = 0; i < numberOfPoints-1; i++) {
                 int index = numberOfPoints-i-1;
-                curves[i] = findShortestPathCollisionDetection(newPoints[index]->x, newPoints[index]->y, mod2pi(angles[index] + M_PI), newPoints[index-1]->x, newPoints[index-1]->y, mod2pi(angles[index-1] + M_PI), graph);
+                curves[i] = findShortestPathCollisionDetection(newPoints[index]->x, newPoints[index]->y, mod2pi(angles[index] + M_PI), newPoints[index-1]->x, newPoints[index-1]->y, mod2pi(angles[index-1] + M_PI), edges);
                 if (curves[i] == nullptr) {
                     delete[] newPoints;
                     return nullptr;
