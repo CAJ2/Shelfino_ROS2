@@ -69,9 +69,6 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
 
     for(int i = 0; i < (int)graphPath.graph_path_points.size() - 1; i++)
     {
-        graph::Point point1{graphPath.graph_path_points[i].x, graphPath.graph_path_points[i].y};
-        graph::Point point2{graphPath.graph_path_points[i+1].x, graphPath.graph_path_points[i+1].y};
-
         dubinsPoints[i] = new dubins::DubinsPoint{graphPath.graph_path_points[i].x, graphPath.graph_path_points[i].y, 0.0};
     }
 
@@ -100,6 +97,28 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
         dubins::DubinsArc* arc = dubinsCurves[i]->a1;
 
         float deviderLength = arc->L / (float)deviderNumber;
+        for(float s = 0.0; s < arc->L; s += deviderLength)
+        {
+            geometry_msgs::msg::Pose pose;
+            dubins::DubinsLine line(s, arc->x0, arc->y0, arc->th0, arc->k);
+            pose.position.x = line.x;
+            pose.position.y = line.y;
+            pose.position.z = line.th; // yes, to the z the orientation is assigned
+            dubinsPathPoints.push_back(pose);
+        }
+
+        arc = dubinsCurves[i]->a2;
+        for(float s = 0.0; s < arc->L; s += deviderLength)
+        {
+            geometry_msgs::msg::Pose pose;
+            dubins::DubinsLine line(s, arc->x0, arc->y0, arc->th0, arc->k);
+            pose.position.x = line.x;
+            pose.position.y = line.y;
+            pose.position.z = line.th; // yes, to the z the orientation is assigned
+            dubinsPathPoints.push_back(pose);
+        }
+
+        arc = dubinsCurves[i]->a3;
         for(float s = 0.0; s < arc->L; s += deviderLength)
         {
             geometry_msgs::msg::Pose pose;
