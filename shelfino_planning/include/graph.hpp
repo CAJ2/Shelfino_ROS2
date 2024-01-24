@@ -205,6 +205,8 @@ namespace graph
          */
         bool isVisibilityGraph;
 
+        Graph() = default;
+
         /**
         * @brief Constructor of the graph
         * 
@@ -299,6 +301,8 @@ namespace graph
         * @param point point we want to search
         */
         std::vector<Edge> getItems(Point point);
+
+        int getOrientation(Point p, Point q, Point r);
 
         /** 
         * @brief checks if the map contains a point, if it does returns the edges of that point

@@ -325,9 +325,9 @@ namespace dubins
      * @param edges All obstacles' edges
      * @return DubinsCurve* Resulting curve representing the shortest path
      */
-    DubinsCurve *Dubins::findShortestPathCollisionDetection(double x0, double y0, double th0, double xf, double yf, double thf, visgraph::Graph &graph)
+    DubinsCurve *Dubins::findShortestPathCollisionDetection(double x0, double y0, double th0, double xf, double yf, double thf, graph::Graph &graph)
     {
-        std::vector<visgraph::Edge> edges = graph.getEdges();
+        std::vector<graph::Edge> edges = graph.getEdges();
         ParametersResult *scaled_parameters = scaleToStandard(x0, y0, th0, xf, yf, thf);
 
         DubinsCurve *curve = nullptr;
@@ -441,7 +441,7 @@ namespace dubins
         }
         delete scaled_parameters;
         delete best_curve_segments;
-        std::vector<visgraph::Edge>().swap(edges);
+        std::vector<graph::Edge>().swap(edges);
         return curve;
     };
 
@@ -452,7 +452,7 @@ namespace dubins
      * @param numberOfPoints The number of points provided
      * @return DubinsCurve** Resulting array of curves that together represent the shortest path
      */
-    double *Dubins::multipointShortestPathAngles(DubinsPoint **points, unsigned int numberOfPoints, visgraph::Graph &graph)
+    double *Dubins::multipointShortestPathAngles(DubinsPoint **points, unsigned int numberOfPoints, graph::Graph &graph)
     {
         // std::cout << "INPUT WITH " << numberOfPoints << " POINTS: \n";
         // std::cout << "X\tY\tTHETA\n";
@@ -646,7 +646,7 @@ namespace dubins
      * @param numberOfPoints Number of points we have
      * @return DubinsCurve** Array of DubinsCurves
      */
-    DubinsCurve **Dubins::multipointShortestPath(DubinsPoint **points, unsigned int numberOfPoints, visgraph::Graph &graph)
+    DubinsCurve **Dubins::multipointShortestPath(DubinsPoint **points, unsigned int numberOfPoints, graph::Graph &graph)
     {
         if (numberOfPoints > 1) {
             DubinsPoint **newPoints = new DubinsPoint*[numberOfPoints];
@@ -993,9 +993,9 @@ namespace dubins
         // Check if the arc goes clockwise (orientation=-1) or counterclockwise(orientation=1)
         double s = arc->L/100 * 50;
         DubinsLine *tmp = new DubinsLine(s, arc->x0, arc->y0, arc->th0, arc->k);
-        visgraph::Point middlePoint = visgraph::Point(tmp->x, tmp->y);
-        visgraph::VisGraph vis;
-        int orientation = vis.getOrientation(visgraph::Point(arc->x0, arc->y0), middlePoint, visgraph::Point(arc->dubins_line->x, arc->dubins_line->y));
+        graph::Point middlePoint = graph::Point(tmp->x, tmp->y);
+        graph::Graph g;
+        int orientation = g.getOrientation(graph::Point(arc->x0, arc->y0), middlePoint, graph::Point(arc->dubins_line->x, arc->dubins_line->y));
         delete tmp;
 
         // Fill the resulting arrays

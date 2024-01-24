@@ -35,6 +35,7 @@
 #include "planning_msgs/msg/graph_path.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "graph_node.hpp"
+#include "graph.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -55,37 +56,32 @@ static const rmw_qos_profile_t rmw_qos_profile_custom2 =
   false
 };
 
-class GraphSearch : public rclcpp::Node
+class DubinsPathGenerator : public rclcpp::Node
 {
 public:
-    explicit GraphSearch()
-    : Node("graph_search", rclcpp::NodeOptions().allow_undeclared_parameters(true))
+    explicit DubinsPathGenerator()
+    : Node("dubins_node", rclcpp::NodeOptions().allow_undeclared_parameters(true))
     {
         RCLCPP_INFO(this->get_logger(), "\n\n -------- NODE ACTIVATED ---------------");
 
         auto qos = rclcpp::QoS(rclcpp::KeepLast(1), rmw_qos_profile_custom2);
 
-        roadmap_subscription_ = this->create_subscription<planning_msgs::msg::RoadmapInfo>(
-                "/roadmap", qos, std::bind(&GraphSearch::roadmapCallback, this, _1));
+        graph_path_subscription_ = this->create_subscription<planning_msgs::msg::GraphPath>(
+                "/graph_path", qos, std::bind(&DubinsPathGenerator::graphPathCallback, this, _1));
 
         marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/graph_search", qos);
-        publisher_graph_path_ = this->create_publisher<planning_msgs::msg::GraphPath>("/graph_path", qos);
+     //   publisher_graph_path_ = this->create_publisher<planning_msgs::msg::GraphPath>("/graph_path", qos);
     }
 
 private:
 
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;    
-    rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;
-    rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_graph_path_;   
+    rclcpp::Subscription<planning_msgs::msg::GraphPath>::SharedPtr graph_path_subscription_;
+  //  rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_graph_path_;   
 
-    std::set<graph_search::Node, std::less<graph_search::Node>> openSet;
-    std::vector<graph_search::Node> closedSet;
-    std::vector<graph_search::Node> allNodes;
-    std::vector<graph_search::Node> path;
-    
-    void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
-    void AStarSearch(int startNodeID, int goalNodeID);
-    void reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
+    std::vector<graph::Edge> graphEdges;
+
+    void graphPathCallback(const planning_msgs::msg::GraphPath::SharedPtr msg);
     void visualizePath();
-    void publishGraphPath();
+    void publishPath();
 };

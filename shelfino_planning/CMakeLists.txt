@@ -8,6 +8,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+add_definitions(-Wno-error)
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -34,6 +36,7 @@ set(NODES
   random_points
   voronoi_points
   graph_search
+  dubins_node
 )
 
 add_library(${PROJECT_NAME}_lib SHARED
@@ -61,7 +64,7 @@ ament_target_dependencies(
 
 # build nodes
 foreach(NODE ${NODES})
-  add_executable(${NODE} src/${NODE}.cpp src/utilities.cpp)
+  add_executable(${NODE} src/${NODE}.cpp src/utilities.cpp src/utils.cpp src/graph.cpp src/dubins.cpp)
 
   target_include_directories(${NODE} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

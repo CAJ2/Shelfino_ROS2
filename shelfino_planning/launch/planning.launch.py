@@ -70,6 +70,12 @@ def generate_launch_description():
             name='graph_search',
             output='screen',
         ),
+        Node (
+            package='shelfino_planning',
+            executable='dubins_node',
+            name='dubins_node',
+            output='screen',
+        ),
     ]
 
     # Launch configured roadmap services

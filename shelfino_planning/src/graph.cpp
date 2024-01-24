@@ -237,6 +237,15 @@ std::vector<Edge> Graph::getItems(Point point){
     return edges;
 }
 
+int graph::Graph::getOrientation(Point p, Point q, Point r)
+{
+    double val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+
+    if (val == 0)
+        return 0; // collinear
+    return (val < 0) ? 1 : -1; // clock or counterclock wise
+}
+
 /** 
  * @brief checks if the map contains a point, if it does returns the edges of that point
  * @param point the point we need to check

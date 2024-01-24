@@ -42,6 +42,8 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
 
     visualizePath();
 
+    publishGraphPath();
+
     return;
 }
 
@@ -177,6 +179,26 @@ void GraphSearch::visualizePath()
     marker_pub_->publish(line_list);
 
     RCLCPP_INFO(this->get_logger(), "Path published");
+}
+
+void GraphSearch::publishGraphPath()
+{
+    RCLCPP_INFO(this->get_logger(), "Publishing graph path");
+
+    planning_msgs::msg::GraphPath graphPath;
+
+    for(auto& node : path)
+    {
+        planning_msgs::msg::Point2D point;
+        point.x = node.position.x;
+        point.y = node.position.y;
+        graphPath.graph_path_points.push_back(point);
+    }
+
+    publisher_graph_path_->publish(graphPath);
+
+    RCLCPP_INFO(this->get_logger(), "Graph path published");
+
 }
 
 int main(int argc, char * argv[])

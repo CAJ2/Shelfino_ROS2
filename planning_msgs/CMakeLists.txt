@@ -22,6 +22,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RoadmapEdge.msg"
   "msg/Roadmap.msg"
   "msg/RoadmapInfo.msg"
+  "msg/GraphPath.msg"
   "srv/GenRoadmap.srv"
   "action/GenRoadmap.action"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs obstacles_msgs nav_msgs
