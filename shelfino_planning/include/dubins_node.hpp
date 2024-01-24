@@ -26,6 +26,7 @@
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/polygon.hpp"
 #include "geometry_msgs/msg/polygon_stamped.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "obstacles_msgs/msg/obstacle_array_msg.hpp"
 #include "obstacles_msgs/msg/obstacle_msg.hpp"
 #include "visualization_msgs/msg/marker.hpp"
@@ -34,6 +35,7 @@
 #include "planning_msgs/msg/roadmap_info.hpp"
 #include "planning_msgs/msg/graph_path.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
+#include "nav_msgs/msg/path.hpp"
 #include "graph_node.hpp"
 #include "graph.hpp"
 
@@ -71,19 +73,20 @@ public:
         roadmap_subscription_ = this->create_subscription<planning_msgs::msg::RoadmapInfo>(
                 "/roadmap", qos, std::bind(&DubinsPathGenerator::roadmapCallback, this, _1));
 
-        marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/graph_search", qos);
-     //   publisher_graph_path_ = this->create_publisher<planning_msgs::msg::GraphPath>("/graph_path", qos);
+        marker_pub_ = this->create_publisher<nav_msgs::msg::Path>("markers/graph_search", qos);
+        publisher_dubins_path_ = this->create_publisher<nav_msgs::msg::Path>("/dubins_path", qos);
     }
 
 private:
 
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;    
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr marker_pub_;
     rclcpp::Subscription<planning_msgs::msg::GraphPath>::SharedPtr graph_path_subscription_;
     rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;
-  //  rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_graph_path_;   
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr publisher_dubins_path_;
 
     std::vector<graph::Edge> obstacleEdges;
     planning_msgs::msg::RoadmapInfo roadmapInfo;
+    std::vector<geometry_msgs::msg::Pose> dubinsPathPoints;
 
     void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
     void graphPathCallback(const planning_msgs::msg::GraphPath::SharedPtr msg);

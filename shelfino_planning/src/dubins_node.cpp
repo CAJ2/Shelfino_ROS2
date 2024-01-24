@@ -24,7 +24,7 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
         if("CYLINDER" == obs.type)
         {
             geometry_msgs::msg::Polygon polygon;
-            polygon = approximateCircle(obs.x, obs.y, obs.radius, 20);    
+            polygon = approximateCircle(obs.x, obs.y, obs.radius, 20);
             for(int i; i < polygon.points.size() - 1; i++)
             {
                 graph::Point point1{obs.polygon.points[i].x, obs.polygon.points[i].y};
@@ -71,13 +71,13 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
     {
         graph::Point point1{graphPath.graph_path_points[i].x, graphPath.graph_path_points[i].y};
         graph::Point point2{graphPath.graph_path_points[i+1].x, graphPath.graph_path_points[i+1].y};
-       
+
         dubinsPoints[i] = new dubins::DubinsPoint{graphPath.graph_path_points[i].x, graphPath.graph_path_points[i].y, 0.0};
     }
 
-    dubinsPoints[graphPath.graph_path_points.size() - 1] = 
-        new dubins::DubinsPoint{graphPath.graph_path_points[graphPath.graph_path_points.size() - 1].x, 
-                                graphPath.graph_path_points[graphPath.graph_path_points.size() - 1].y, 
+    dubinsPoints[graphPath.graph_path_points.size() - 1] =
+        new dubins::DubinsPoint{graphPath.graph_path_points[graphPath.graph_path_points.size() - 1].x,
+                                graphPath.graph_path_points[graphPath.graph_path_points.size() - 1].y,
                                 0.0};
 
     RCLCPP_INFO(this->get_logger(), "/*/*/***/*-----------------Graph path received-----------------");
@@ -93,8 +93,6 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
         delete dubinsPoints[i];
     }
     delete[] dubinsPoints;
-
-    std::vector<geometry_msgs::msg::Pose> dubinsPathPoints;
 
     for(int i = 0; i < graphPath.graph_path_points.size() - 1; i++)
     {
@@ -119,15 +117,45 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
     }
     delete[] dubinsCurves;
 
+    visualizePath();
+
+    publishPath();
+
     return;
 }
 
 void DubinsPathGenerator::visualizePath()
 {
+    nav_msgs::msg::Path path;
+    path.header.frame_id = "map";
+    auto now = this->now();
+    path.header.stamp = now;
+    for (auto p : dubinsPathPoints)
+    {
+        geometry_msgs::msg::PoseStamped pose;
+        pose.header.frame_id = "map";
+        pose.header.stamp = now;
+        pose.pose = p;
+        path.poses.push_back(pose);
+    }
+    this->marker_pub_->publish(path);
 }
 
 void DubinsPathGenerator::publishPath()
 {
+    nav_msgs::msg::Path path;
+    path.header.frame_id = "map";
+    auto now = this->now();
+    path.header.stamp = now;
+    for (auto p : dubinsPathPoints)
+    {
+        geometry_msgs::msg::PoseStamped pose;
+        pose.header.frame_id = "map";
+        pose.header.stamp = now;
+        pose.pose = p;
+        path.poses.push_back(pose);
+    }
+    this->publisher_dubins_path_->publish(path);
 }
 
 int main(int argc, char * argv[])
