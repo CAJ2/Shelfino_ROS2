@@ -74,18 +74,18 @@ public:
 
 private:
 
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;    
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
     rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;
-    rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_graph_path_;   
+    rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_graph_path_;
 
     std::set<graph_search::Node, std::less<graph_search::Node>> openSet;
     std::vector<graph_search::Node> closedSet;
     std::vector<graph_search::Node> allNodes;
     std::vector<graph_search::Node> path;
-    
+
     void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
     void AStarSearch(int startNodeID, int goalNodeID);
     void reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
     void visualizePath();
-    void publishGraphPath();
+    void publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmapInfo);
 };

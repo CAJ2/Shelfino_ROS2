@@ -148,21 +148,21 @@ public:
                 this->publisher_roadmap->publish(info);
 
                 visualization_msgs::msg::MarkerArray marks;
-                
+
                 //Here for the nodes
                 for (size_t i = 0; i < response->roadmap.nodes.size(); i++) {
                     auto node = response->roadmap.nodes[i];
                     visualization_msgs::msg::Marker mark = add_point(node.x , node.y, s, i);
                     marks.markers.push_back(mark);
                 }
-                
-                //Here for the edges 
+
+                //Here for the edges
                 int id = response->roadmap.nodes.size();
                 for (size_t i = 0; i < response->roadmap.edges.size(); i++) {
                     auto nodes = response->roadmap.edges[i].node_ids;
-                    
+
                     for(uint node_id : nodes){
-                        // Edge is intended that the index of the edge in the list is the id 
+                        // Edge is intended that the index of the edge in the list is the id
                         // of the starting node, and the list contains the connected nodes ids
                         float x1 = response->roadmap.nodes[i].x;
                         float y1 = response->roadmap.nodes[i].y;
@@ -172,10 +172,10 @@ public:
                         marks.markers.push_back(mark);
                         id++;
                     }
-                    
+
                 }
                 RCLCPP_INFO(this->get_logger(), "\n RECEIVED %li nodes and %li edges (equal number in theory) \n\n", response->roadmap.nodes.size(), response->roadmap.edges.size());
-                
+
                 this->publisher_rviz->publish(marks);
             };
 
@@ -319,6 +319,8 @@ private:
         RCLCPP_INFO(this->get_logger(), "Pose (%f,%f)", msg->pose.pose.position.x, msg->pose.pose.position.x);
 
         this->pose_ready = true;
+        // Unsubscribe
+        this->sub_amcl_pose_.reset();
         this->activate_wrapper();
     }
 
@@ -366,7 +368,7 @@ private:
 
         return mark;
     }
-    
+
     visualization_msgs::msg::Marker add_line(float x1, float y1, float x2, float y2, std::string service, int id) {
         // Publish markers, just for rviz
         std_msgs::msg::Header hh;
@@ -393,9 +395,9 @@ private:
 
         mark.points.push_back(start_point);
         mark.points.push_back(end_point);
-            
+
         mark.scale.x = 0.03; //line width
-        
+
         mark.color.a = 0.5;
         mark.color.r = 0.0;
         mark.color.g = 0.0;
@@ -413,7 +415,10 @@ private:
             this->occupancy_subscription_.reset();
             this->activate();
         } else {
-            RCLCPP_INFO(this->get_logger(), "Waiting for infos to be ready");
+            std::stringstream ss;
+            ss << "Received info: gates:" << this->gate_ready << " obstacles:" << this->obstacles_ready << " victims:" << this->victims_ready <<
+                " pose:" << this->pose_ready << " borders:" << this->borders_ready << " occupancy:" << this->occupancy_ready;
+            RCLCPP_INFO(this->get_logger(), ss.str().c_str());
         }
 
     }

@@ -41,13 +41,21 @@ def generate_launch_description():
         )
 
     # General arguments
+    use_sim_time         = LaunchConfiguration('use_sim_time', default='false')
     planning_params_file = LaunchConfiguration('planning_params_file', default=planning_params_file_path)
     planning_config = {}
     with open(planning_params_file_path, "r") as f:
         planning_config = yaml.safe_load(f)
 
+
     # Declare LaunchArguments for exposing launching arguments
     launch_args = [
+        DeclareLaunchArgument(
+            name='use_sim_time',
+            default_value=use_sim_time,
+            choices=['true', 'false'],
+            description='Flag to toggle between real robot and simulation'
+        ),
         DeclareLaunchArgument(
             "planning_params_file",
             default_value=planning_params_file_path,
@@ -62,19 +70,37 @@ def generate_launch_description():
             executable='roadmap_harness',
             name='roadmap_harness',
             output='screen',
-            parameters=[planning_config['roadmap_harness']]
+            parameters=[
+                {'use_sim_time': use_sim_time},
+                planning_config['roadmap_harness']
+            ],
         ),
         Node (
             package='shelfino_planning',
             executable='graph_search',
             name='graph_search',
             output='screen',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+            ]
         ),
         Node (
             package='shelfino_planning',
             executable='dubins_node',
             name='dubins_node',
             output='screen',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+            ]
+        ),
+        Node (
+            package='shelfino_planning',
+            executable='execute_path',
+            name='execute_path',
+            output='screen',
+            parameters=[
+                {'use_sim_time': use_sim_time},
+            ]
         ),
     ]
 

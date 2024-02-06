@@ -15,7 +15,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
         graph_search::Node node(i);
         node.position.x = roadmapInfo.roadmap.nodes[i].x;
         node.position.y = roadmapInfo.roadmap.nodes[i].y;
-        
+
         for(auto& n : nodes)
         {
             node.neighbors.push_back(n);
@@ -42,7 +42,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
 
     visualizePath();
 
-    publishGraphPath();
+    publishGraphPath(roadmapInfo);
 
     return;
 }
@@ -113,7 +113,7 @@ void GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
                 allNodes[neighbor.nodeID].parentID = neighbor.parentID;
             }
         }
-    }   
+    }
     return;
 }
 
@@ -181,11 +181,21 @@ void GraphSearch::visualizePath()
     RCLCPP_INFO(this->get_logger(), "Path published");
 }
 
-void GraphSearch::publishGraphPath()
+void GraphSearch::publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmapInfo)
 {
     RCLCPP_INFO(this->get_logger(), "Publishing graph path");
 
     planning_msgs::msg::GraphPath graphPath;
+    graphPath.header = roadmapInfo.header;
+    graphPath.roadmap = roadmapInfo.roadmap;
+    graphPath.generator = roadmapInfo.generator;
+    graphPath.roadmap_duration = roadmapInfo.roadmap_duration;
+    graphPath.path_planner = "graph_search";
+    graphPath.path_planning_duration = 0;
+    graphPath.robot_pose = roadmapInfo.robot_pose;
+    graphPath.gate = roadmapInfo.gate;
+    graphPath.obstacles = roadmapInfo.obstacles;
+    graphPath.victims = roadmapInfo.victims;
 
     for(auto& node : path)
     {

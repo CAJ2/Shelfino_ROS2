@@ -138,7 +138,7 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
 
     visualizePath();
 
-    publishPath();
+    publishPath(graphPath);
 
     return;
 }
@@ -160,7 +160,7 @@ void DubinsPathGenerator::visualizePath()
     this->marker_pub_->publish(path);
 }
 
-void DubinsPathGenerator::publishPath()
+void DubinsPathGenerator::publishPath(planning_msgs::msg::GraphPath msg)
 {
     nav_msgs::msg::Path path;
     path.header.frame_id = "map";
@@ -174,7 +174,9 @@ void DubinsPathGenerator::publishPath()
         pose.pose = p;
         path.poses.push_back(pose);
     }
-    this->publisher_dubins_path_->publish(path);
+    msg.graph_path = path;
+
+    this->publisher_dubins_path_->publish(msg);
 }
 
 int main(int argc, char * argv[])

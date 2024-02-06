@@ -209,6 +209,7 @@ def generate_launch_description():
                 '/planning.launch.py']
             ),
             launch_arguments= {
+                'use_sim_time': use_sim_time,
                 'planning_params_file': planning_params_file,
             }.items()
         )

@@ -24,6 +24,7 @@ find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(planning_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
@@ -37,6 +38,7 @@ set(NODES
   voronoi_points
   graph_search
   dubins_node
+  execute_path
 )
 
 add_library(${PROJECT_NAME}_lib SHARED
@@ -60,6 +62,7 @@ ament_target_dependencies(
   "rclcpp_lifecycle"
   "planning_msgs"
   "rclcpp_action"
+  "nav2_msgs"
 )
 
 # build nodes
@@ -90,6 +93,7 @@ foreach(NODE ${NODES})
     "visualization_msgs"
     "planning_msgs"
     "rclcpp_action"
+    "nav2_msgs"
   )
 
   install(TARGETS ${NODE}
