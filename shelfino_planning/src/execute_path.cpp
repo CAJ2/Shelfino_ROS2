@@ -46,18 +46,27 @@ void ExecutePath::runPath()
             RCLCPP_INFO(this->get_logger(), "Running path from node %s", current_path.path_planner.c_str());
 
             int path_split = 100;
-            for (int i = 0; i < current_path.graph_path.poses.size(); i += path_split)
+            for (size_t i = 0; i < current_path.graph_path.poses.size(); i)
             {
-                RCLCPP_INFO(this->get_logger(), "Path node %d: x:%f, y:%f", i, current_path.graph_path.poses[i].pose.position.x, current_path.graph_path.poses[i].pose.position.y);
+                RCLCPP_INFO(this->get_logger(), "Path node %ld: x:%f, y:%f", i, current_path.graph_path.poses[i].pose.position.x, current_path.graph_path.poses[i].pose.position.y);
                 nav_msgs::msg::Path path;
                 path.header = current_path.graph_path.header;
-                for (int j = i; j < i + path_split && j < current_path.graph_path.poses.size(); j++)
+                size_t j = i;
+                double total_distance = 0;
+                for (j = i; total_distance < 4.0 && j < current_path.graph_path.poses.size(); j++)
                 {
                     path.poses.push_back(current_path.graph_path.poses[j]);
+                    if (j + 1 < current_path.graph_path.poses.size())
+                    {
+                        auto curr = current_path.graph_path.poses[j].pose.position;
+                        auto next = current_path.graph_path.poses[j + 1].pose.position;
+                        total_distance += sqrt(pow(curr.x - next.x, 2) + pow(curr.y - next.y, 2));
+                    }
                 }
+                i = j;
                 this->path_goals.push_back(path);
             }
-            RCLCPP_INFO(this->get_logger(), "Path split into %d goals", this->path_goals.size());
+            RCLCPP_INFO(this->get_logger(), "Path split into %ld goals", this->path_goals.size());
 
             if (!this->action_follow_path->wait_for_action_server(10s)) {
                 RCLCPP_ERROR(this->get_logger(), "Action server not available after waiting");
@@ -71,38 +80,7 @@ void ExecutePath::runPath()
     if(running_path)
     {
         if (!this->current_path_running) {
-            if (this->current_path_goal >= this->path_goals.size())
-            {
-                this->running_path = false;
-                this->current_path_goal = 0;
-                this->path_goals.clear();
-                RCLCPP_INFO(this->get_logger(), "Finished running path from node %s", current_path.path_planner.c_str());
-                return;
-            }
-            this->publisher_action_plan->publish(this->path_goals[this->current_path_goal]);
-            RCLCPP_INFO(this->get_logger(), "Published path from node %s", current_path.path_planner.c_str());
-
-            // Debug print the current path_goals
-            auto first_path_goal = this->path_goals[this->current_path_goal].poses.front();
-            RCLCPP_INFO(this->get_logger(), "Path goal start: %f, %f", first_path_goal.pose.position.x, first_path_goal.pose.position.y);
-            auto last_path_goal = this->path_goals[this->current_path_goal].poses.back();
-            RCLCPP_INFO(this->get_logger(), "Path goal end: %f, %f", last_path_goal.pose.position.x, last_path_goal.pose.position.y);
-
-            this->path_goals[this->current_path_goal].header.stamp = this->get_clock()->now();
-            this->path_goals[this->current_path_goal].header.frame_id = "map";
-            auto goal_msg = FollowPath::Goal();
-            goal_msg.path = this->path_goals[this->current_path_goal];
-            goal_msg.controller_id = "FollowPath";
-            goal_msg.goal_checker_id = "goal_checker";
-
-            auto send_goal_options = rclcpp_action::Client<FollowPath>::SendGoalOptions();
-            send_goal_options.goal_response_callback = std::bind(&ExecutePath::goalResponseCallback, this, _1);
-            send_goal_options.feedback_callback = std::bind(&ExecutePath::feedbackCallback, this, _1, _2);
-            send_goal_options.result_callback = std::bind(&ExecutePath::resultCallback, this, _1);
-            this->action_follow_path->async_send_goal(goal_msg, send_goal_options);
-            RCLCPP_INFO(this->get_logger(), "Sent action goal for node %s", current_path.path_planner.c_str());
-            this->current_path_running = true;
-            this->current_path_goal++;
+            this->runNextPathGoal();
         }
 
         if(current_path.roadmap.nodes.size() > 0)
@@ -142,6 +120,42 @@ void ExecutePath::runPath()
     }
 }
 
+void ExecutePath::runNextPathGoal()
+{
+    if (this->current_path_goal >= this->path_goals.size())
+    {
+        this->running_path = false;
+        this->current_path_goal = 0;
+        this->path_goals.clear();
+        RCLCPP_INFO(this->get_logger(), "Finished running path from node %s", current_path.path_planner.c_str());
+        return;
+    }
+    this->publisher_action_plan->publish(this->path_goals[this->current_path_goal]);
+    RCLCPP_INFO(this->get_logger(), "Published path from node %s", current_path.path_planner.c_str());
+
+    // Debug print the current path_goals
+    auto first_path_goal = this->path_goals[this->current_path_goal].poses.front();
+    RCLCPP_INFO(this->get_logger(), "Path goal start: %f, %f", first_path_goal.pose.position.x, first_path_goal.pose.position.y);
+    auto last_path_goal = this->path_goals[this->current_path_goal].poses.back();
+    RCLCPP_INFO(this->get_logger(), "Path goal end: %f, %f", last_path_goal.pose.position.x, last_path_goal.pose.position.y);
+
+    this->path_goals[this->current_path_goal].header.stamp = this->get_clock()->now();
+    this->path_goals[this->current_path_goal].header.frame_id = "map";
+    auto goal_msg = FollowPath::Goal();
+    goal_msg.path = this->path_goals[this->current_path_goal];
+    goal_msg.controller_id = "FollowPath";
+    goal_msg.goal_checker_id = "goal_checker";
+
+    auto send_goal_options = rclcpp_action::Client<FollowPath>::SendGoalOptions();
+    send_goal_options.goal_response_callback = std::bind(&ExecutePath::goalResponseCallback, this, _1);
+    send_goal_options.feedback_callback = std::bind(&ExecutePath::feedbackCallback, this, _1, _2);
+    send_goal_options.result_callback = std::bind(&ExecutePath::resultCallback, this, _1);
+    this->action_follow_path->async_send_goal(goal_msg, send_goal_options);
+    RCLCPP_INFO(this->get_logger(), "Sent action goal for node %s", current_path.path_planner.c_str());
+    this->current_path_running = true;
+    this->current_path_goal++;
+}
+
 void ExecutePath::goalResponseCallback(const GoalHandleFollowPath::SharedPtr& msg)
 {
     if (!msg) {
@@ -158,6 +172,14 @@ void ExecutePath::feedbackCallback(const GoalHandleFollowPath::SharedPtr& msg, c
     std::stringstream ss;
     ss << "Feedback received with " << feedback->distance_to_goal << " distance to goal";
     RCLCPP_INFO(this->get_logger(), ss.str().c_str());
+    this->feedback_timeout = this->get_clock()->now();
+    if (feedback->distance_to_goal < 0.02)
+    {
+        this->action_follow_path->async_cancel_all_goals([this](const std::shared_ptr<action_msgs::srv::CancelGoal_Response> goal_handle) {
+            this->current_path_running = false;
+            this->runNextPathGoal();
+        });
+    }
 }
 
 void ExecutePath::resultCallback(const GoalHandleFollowPath::WrappedResult& result)
@@ -165,8 +187,9 @@ void ExecutePath::resultCallback(const GoalHandleFollowPath::WrappedResult& resu
     switch (result.code) {
         case rclcpp_action::ResultCode::SUCCEEDED:
             RCLCPP_INFO(this->get_logger(), "Goal was successfully executed. Waiting for next path");
-            RCLCPP_INFO(this->get_logger(), "Path goals remaining: %d", this->path_goals.size() - this->current_path_goal);
+            RCLCPP_INFO(this->get_logger(), "Path goals remaining: %ld", this->path_goals.size() - this->current_path_goal);
             this->current_path_running = false;
+            this->runNextPathGoal();
             break;
         case rclcpp_action::ResultCode::ABORTED:
             RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
@@ -181,6 +204,7 @@ void ExecutePath::resultCallback(const GoalHandleFollowPath::WrappedResult& resu
             running_path = false;
             break;
     }
+    this->feedback_timeout = rclcpp::Time(0);
 }
 
 

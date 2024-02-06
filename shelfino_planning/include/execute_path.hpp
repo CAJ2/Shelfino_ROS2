@@ -65,12 +65,14 @@ private:
     int current_path_goal = 0;
     bool current_path_running = false;
     rclcpp::Time start_time;
+    rclcpp::Time feedback_timeout;
 
     std::vector<planning_msgs::msg::GraphPath> graph_paths;
     std::vector<planning_msgs::msg::GraphPath> graph_paths_complete;
 
     void graphPathCallback(const planning_msgs::msg::GraphPath::SharedPtr msg);
     void runPath();
+    void runNextPathGoal();
     void goalResponseCallback(const GoalHandleFollowPath::SharedPtr& msg);
     void feedbackCallback(const GoalHandleFollowPath::SharedPtr& msg, const std::shared_ptr<const FollowPath::Feedback> feedback);
     void resultCallback(const GoalHandleFollowPath::WrappedResult& result);
