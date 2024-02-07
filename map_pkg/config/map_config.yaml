@@ -2,7 +2,7 @@
   ros__parameters:
     n_obstacles: 4
     no_cylinders: false
-    no_boxes: false
+    no_boxes: true
     max_size: 1.0
     min_size: 0.5
 

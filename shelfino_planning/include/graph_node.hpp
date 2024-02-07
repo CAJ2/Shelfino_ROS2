@@ -5,8 +5,12 @@
 
 namespace graph_search {
 
+    //CHANGED from manhattan to euclidean distance
     double distance(const planning_msgs::msg::Point2D& p1, const planning_msgs::msg::Point2D& p2) {
-        return std::abs(p1.x - p2.x) + std::abs(p1.y - p2.y);
+        // Euclidean distance formula: sqrt((x2 - x1)^2 + (y2 - y1)^2)
+        double dx = p2.x - p1.x;
+        double dy = p2.y - p1.y;
+        return std::sqrt(dx * dx + dy * dy);
     }
 
     class Node {

@@ -81,11 +81,14 @@ private:
     std::set<graph_search::Node, std::less<graph_search::Node>> openSet;
     std::vector<graph_search::Node> closedSet;
     std::vector<graph_search::Node> allNodes;
+    std::vector<graph_search::Node> allNodesBackup;
     std::vector<graph_search::Node> path;
+    std::vector<graph_search::Node> salesman_path;
 
     void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
-    void AStarSearch(int startNodeID, int goalNodeID);
-    void reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
+    void SalesManSearch();
+    double AStarSearch(int startNodeID, int goalNodeID);
+    double reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
     void visualizePath();
     void publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmapInfo);
 };

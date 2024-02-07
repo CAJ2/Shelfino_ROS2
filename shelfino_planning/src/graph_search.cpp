@@ -3,11 +3,10 @@
 void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg)
 {
     RCLCPP_INFO(this->get_logger(), "/*/*/***/*-----------------Roadmap received-----------------");
-
     planning_msgs::msg::RoadmapInfo roadmapInfo = *msg;
-
     int startNodeID;
     int goalNodeID;
+    
 
     for(int i = 0; i < (int)roadmapInfo.roadmap.edges.size(); i++)
     {
@@ -21,7 +20,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
             node.neighbors.push_back(n);
         }
 
-        allNodes.push_back(node);
+        allNodesBackup.push_back(node);
 
         if(node.position.x == roadmapInfo.gate.position.x && node.position.y == roadmapInfo.gate.position.y)
         {
@@ -31,15 +30,25 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
         {
             startNodeID = node.nodeID;
         }
+
     }
 
     RCLCPP_INFO(this->get_logger(), "Start node: %d", startNodeID);
     RCLCPP_INFO(this->get_logger(), "Goal node: %d", goalNodeID);
-    RCLCPP_INFO(this->get_logger(), "Start position: %f, %f", allNodes[startNodeID].position.x, allNodes[startNodeID].position.y);
-    RCLCPP_INFO(this->get_logger(), "Goal position: %f, %f", allNodes[goalNodeID].position.x, allNodes[goalNodeID].position.y);
+    RCLCPP_INFO(this->get_logger(), "Start position: %f, %f", allNodesBackup[startNodeID].position.x, allNodesBackup[startNodeID].position.y);
+    RCLCPP_INFO(this->get_logger(), "Goal position: %f, %f", allNodesBackup[goalNodeID].position.x, allNodesBackup[goalNodeID].position.y);
 
-    AStarSearch(startNodeID, goalNodeID);
 
+    SalesManSearch();
+    
+    //printing the path
+    for(auto node : salesman_path)
+    {
+        RCLCPP_INFO(this->get_logger(), "--- FINAL ids of path: %d", node.nodeID);
+    }
+    
+    
+    
     visualizePath();
 
     publishGraphPath(roadmapInfo);
@@ -47,18 +56,72 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
     return;
 }
 
-void GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
+void GraphSearch::SalesManSearch(){
+    double minDistance = std::numeric_limits<double>::infinity();
+    std::vector<int> minPath;
+    std::vector<int> victimsID = {1,2,3,4,5};
+    std::sort(victimsID.begin(), victimsID.end());  //then we will need to populate using the victims list inside the info
+
+    do {
+        // Include the start and goal nodes in the path
+        std::vector<int> currentPath = {0};
+        currentPath.insert(currentPath.end(), victimsID.begin(), victimsID.end());
+        currentPath.push_back(6);
+
+        double currentDistance = 0.0;
+
+        // Compute the total distance of the path
+        for (size_t i = 0; i < currentPath.size() - 1; ++i) {
+            currentDistance += AStarSearch(currentPath[i], currentPath[i + 1]);
+        }
+
+        // Check if the current path is the shortest
+        if (currentDistance < minDistance) {
+            minDistance = currentDistance;
+            minPath = currentPath;
+        }
+
+    } while (std::next_permutation(victimsID.begin(), victimsID.end()));
+
+    // Update the salesman_path with the shortest path found
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path: %F", minDistance);
+    salesman_path.clear(); //not needed?
+    
+    double total_distance = 0.0;
+    for (int i=0; i<minPath.size()-1; i++) {
+        
+        total_distance += AStarSearch(minPath[i], minPath[i + 1]);
+    	salesman_path.insert( salesman_path.end(), path.begin(), path.end() );
+    	if (i!=minPath.size()-2)
+    		salesman_path.pop_back(); //remove the last one
+        
+    }
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path second: %F", total_distance);
+   
+
+}
+
+double GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
 {
-    RCLCPP_INFO(this->get_logger(), "Starting A* search");
+
+    path.clear();
+    openSet.clear(); 
+    closedSet.clear(); 
+    allNodes.clear();
+    //there is a better way 
+    for (int i=0; i<allNodesBackup.size(); i++)  
+        allNodes.push_back(allNodesBackup[i]);  
+    
+    //RCLCPP_INFO(this->get_logger(), "Starting A* search");
 
     graph_search::Node startNode = allNodes[startNodeID];
     graph_search::Node goalNode = allNodes[goalNodeID];
-
+/*
     for(auto& id : startNode.neighbors)
     {
         RCLCPP_INFO(this->get_logger(), "Start node neighbor: %d", id);
     }
-
+*/
     startNode.gCost = 0;
     startNode.computeHeuristic(goalNode, {0});
     startNode.gCost = 0.0;
@@ -71,9 +134,9 @@ void GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
 
         if(currentNode == goalNode)
         {
-            RCLCPP_INFO(this->get_logger(), "Goal reached");
-            reconstructPath(currentNode, startNode);
-            break;
+            //RCLCPP_INFO(this->get_logger(), "Goal reached");
+            return reconstructPath(currentNode, startNode);
+            
         }
 
         closedSet.push_back(currentNode);
@@ -114,26 +177,26 @@ void GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
             }
         }
     }
-    return;
+    return 0.0;
 }
 
-void GraphSearch::reconstructPath(const graph_search::Node& goal, const graph_search::Node& start)
+double GraphSearch::reconstructPath(const graph_search::Node& goal, const graph_search::Node& start)
 {
-    path.clear();
-
     graph_search::Node node = goal;
 
-    int i = 0;
-    while(node.nodeID != start.nodeID && i < 15)
+    double track_distance=0.0;
+    while(node.nodeID != start.nodeID) 
     {
+        track_distance += graph_search::distance(node.position, allNodes[node.parentID].position);
         path.push_back(node);
         node = allNodes[node.parentID];
-        i++;
     }
 
     path.push_back(start);
 
     std::reverse(path.begin(), path.end());
+    
+    return track_distance;
 }
 
 void GraphSearch::visualizePath()
@@ -197,7 +260,7 @@ void GraphSearch::publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmap
     graphPath.obstacles = roadmapInfo.obstacles;
     graphPath.victims = roadmapInfo.victims;
 
-    for(auto& node : path)
+    for(auto& node : salesman_path)
     {
         planning_msgs::msg::Point2D point;
         point.x = node.position.x;
