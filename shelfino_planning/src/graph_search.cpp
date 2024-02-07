@@ -3,11 +3,12 @@
 void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg)
 {
     RCLCPP_INFO(this->get_logger(), "/*/*/***/*-----------------Roadmap received-----------------");
+    
     planning_msgs::msg::RoadmapInfo roadmapInfo = *msg;
     int startNodeID;
     int goalNodeID;
+    std::vector<int> victimsID;
     
-
     for(int i = 0; i < (int)roadmapInfo.roadmap.edges.size(); i++)
     {
         const auto& nodes = roadmapInfo.roadmap.edges[i].node_ids;
@@ -20,7 +21,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
             node.neighbors.push_back(n);
         }
 
-        allNodesBackup.push_back(node);
+        
 
         if(node.position.x == roadmapInfo.gate.position.x && node.position.y == roadmapInfo.gate.position.y)
         {
@@ -30,16 +31,31 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
         {
             startNodeID = node.nodeID;
         }
+        for(auto victim : roadmapInfo.victims.obstacles){
+            if (node.position.x == victim.polygon.points[0].x && node.position.y == victim.polygon.points[0].y){
+            		//RCLCPP_INFO(this->get_logger(), "-> node posx %f and vict pos x: %f", node.position.x, victim.polygon.points[0].x);
+        		victimsID.push_back(node.nodeID);
+        		node.value = victim.radius;
+        	}
+        }
+        
+        allNodesBackup.push_back(node);
 
     }
+    
+    
+    for(int v : victimsID)
+    {
+        RCLCPP_INFO(this->get_logger(), "-> VICTIM ID: %d e valore %f", v, allNodesBackup[v].value);
+    }
 
-    RCLCPP_INFO(this->get_logger(), "Start node: %d", startNodeID);
-    RCLCPP_INFO(this->get_logger(), "Goal node: %d", goalNodeID);
+    RCLCPP_INFO(this->get_logger(), "Start node id: %d", startNodeID);
+    RCLCPP_INFO(this->get_logger(), "Goal node id: %d", goalNodeID);
     RCLCPP_INFO(this->get_logger(), "Start position: %f, %f", allNodesBackup[startNodeID].position.x, allNodesBackup[startNodeID].position.y);
     RCLCPP_INFO(this->get_logger(), "Goal position: %f, %f", allNodesBackup[goalNodeID].position.x, allNodesBackup[goalNodeID].position.y);
 
 
-    SalesManSearch();
+    SalesManSearch(startNodeID, goalNodeID, victimsID);
     
     //printing the path
     for(auto node : salesman_path)
@@ -56,17 +72,18 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
     return;
 }
 
-void GraphSearch::SalesManSearch(){
+void GraphSearch::SalesManSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID){
+
     double minDistance = std::numeric_limits<double>::infinity();
     std::vector<int> minPath;
-    std::vector<int> victimsID = {1,2,3,4,5};
-    std::sort(victimsID.begin(), victimsID.end());  //then we will need to populate using the victims list inside the info
+    //std::vector<int> victimsID = {1,2,3,4,5};
+    std::sort(victimsID.begin(), victimsID.end());  //needed?
 
     do {
         // Include the start and goal nodes in the path
-        std::vector<int> currentPath = {0};
+        std::vector<int> currentPath = {startNodeID};
         currentPath.insert(currentPath.end(), victimsID.begin(), victimsID.end());
-        currentPath.push_back(6);
+        currentPath.push_back(goalNodeID);
 
         double currentDistance = 0.0;
 
@@ -85,10 +102,10 @@ void GraphSearch::SalesManSearch(){
 
     // Update the salesman_path with the shortest path found
     RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path: %F", minDistance);
-    salesman_path.clear(); //not needed?
     
+
     double total_distance = 0.0;
-    for (int i=0; i<minPath.size()-1; i++) {
+    for (uint i=0; i<minPath.size()-1; i++) {
         
         total_distance += AStarSearch(minPath[i], minPath[i + 1]);
     	salesman_path.insert( salesman_path.end(), path.begin(), path.end() );
@@ -96,7 +113,7 @@ void GraphSearch::SalesManSearch(){
     		salesman_path.pop_back(); //remove the last one
         
     }
-    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path second: %F", total_distance);
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path (second test): %F", total_distance);
    
 
 }

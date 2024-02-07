@@ -86,7 +86,7 @@ private:
     std::vector<graph_search::Node> salesman_path;
 
     void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
-    void SalesManSearch();
+    void SalesManSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID);
     double AStarSearch(int startNodeID, int goalNodeID);
     double reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
     void visualizePath();

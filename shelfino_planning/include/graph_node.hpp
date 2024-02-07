@@ -24,8 +24,10 @@ namespace graph_search {
         double fCost; // Total cost (f = g + h)
 
         int parentID; // Pointer to parent node
+        
+        float value;
 
-        Node(int id) : nodeID(id), gCost(std::numeric_limits<double>::max()), hCost(0), fCost(0), parentID(0) {}
+        Node(int id) : nodeID(id), gCost(std::numeric_limits<double>::max()), hCost(0), fCost(0), parentID(0), value(0) {}
 
         // Compute heuristic based on some function (this will be application-specific)
         void computeHeuristic(const Node& goal, const Node& parent) {
