@@ -1,4 +1,5 @@
 #include "graph_search.hpp"
+#include <algorithm>
 
 void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg)
 {
@@ -46,7 +47,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
     
     for(int v : victimsID)
     {
-        RCLCPP_INFO(this->get_logger(), "-> VICTIM ID: %d e valore %f", v, allNodesBackup[v].value);
+        RCLCPP_INFO(this->get_logger(), "-> VICTIM ID: %d with value: %.2f", v, allNodesBackup[v].value);
     }
 
     RCLCPP_INFO(this->get_logger(), "Start node id: %d", startNodeID);
@@ -55,7 +56,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
     RCLCPP_INFO(this->get_logger(), "Goal position: %f, %f", allNodesBackup[goalNodeID].position.x, allNodesBackup[goalNodeID].position.y);
 
 
-    SalesManSearch(startNodeID, goalNodeID, victimsID);
+    SalesManBruteSearch(startNodeID, goalNodeID, victimsID);
     
     //printing the path
     for(auto node : salesman_path)
@@ -72,8 +73,79 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
     return;
 }
 
-void GraphSearch::SalesManSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID){
 
+void GraphSearch::generateCombinations(std::vector<int>& combination, int offset, int k,
+                          std::vector<int>& victimsID, double DISCOUNT_FACTOR,
+                          double& minDistance, std::vector<int>& minPath,
+                          int startNodeID, int goalNodeID) {
+    if (k == 0) {
+        do {
+		// Try the current combination
+		std::vector<int> currentPath = {startNodeID};
+		currentPath.insert(currentPath.end(), combination.begin(), combination.end());
+		currentPath.push_back(goalNodeID);
+
+		double currentDistance = 0.0;
+
+		// Compute the total distance of the path
+		for (size_t j = 0; j < currentPath.size() - 1; ++j) {
+		    // Compute the A* distance between consecutive nodes
+		    double distance = AStarSearch(currentPath[j], currentPath[j + 1]);
+
+		    // Take into consideration the value of the victim
+		    distance -= allNodesBackup[currentPath[j + 1]].value / DISCOUNT_FACTOR;
+
+		    // Accumulate the distance
+		    currentDistance += distance;
+		}
+
+		// Check if the current path is the shortest
+		if (currentDistance < minDistance) {
+		    minDistance = currentDistance;
+		    minPath = currentPath;
+		}
+	} while (std::next_permutation(combination.begin(), combination.end()));
+        return;
+    }
+
+    for (int i = offset; i <= victimsID.size() - k; ++i) {
+        combination.push_back(victimsID[i]);
+        generateCombinations(combination, i + 1, k - 1, victimsID, DISCOUNT_FACTOR, minDistance, minPath, startNodeID, goalNodeID);
+        combination.pop_back();
+    }
+}
+
+void GraphSearch::SalesManBruteSearch(int startNodeID, int goalNodeID, std::vector<int> victimsID) {
+    double DISCOUNT_FACTOR = 40.0;
+    double minDistance = std::numeric_limits<double>::infinity();
+    std::vector<int> minPath;
+
+    // Sort the victims in ascending order based on their values
+    std::sort(victimsID.begin(), victimsID.end(), [&](int a, int b) {
+        return allNodesBackup[a].value < allNodesBackup[b].value;
+    });
+
+    for (int k = 0; k <= victimsID.size(); ++k) {
+        std::vector<int> combination;
+        generateCombinations(combination, 0, k, victimsID, DISCOUNT_FACTOR, minDistance, minPath, startNodeID, goalNodeID);
+    }
+
+    // Update the salesman_path with the shortest path found
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path given bonus by value: %F", minDistance);
+
+    double total_distance = 0.0;
+    for (uint i = 0; i < minPath.size() - 1; i++) {
+        total_distance += AStarSearch(minPath[i], minPath[i + 1]);
+        salesman_path.insert(salesman_path.end(), path.begin(), path.end());
+        if (i != minPath.size() - 2)
+            salesman_path.pop_back(); // Remove the last one
+    }
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path (without bonus): %F", total_distance);
+}
+
+/*
+void GraphSearch::SalesManBruteSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID){
+    double DISCOUNT_FACTOR = 60.0;
     double minDistance = std::numeric_limits<double>::infinity();
     std::vector<int> minPath;
     //std::vector<int> victimsID = {1,2,3,4,5};
@@ -90,6 +162,9 @@ void GraphSearch::SalesManSearch( int startNodeID, int goalNodeID, std::vector<i
         // Compute the total distance of the path
         for (size_t i = 0; i < currentPath.size() - 1; ++i) {
             currentDistance += AStarSearch(currentPath[i], currentPath[i + 1]);
+            //take into consideration the value of the victim
+            //(at the moment all of the victims rescued)
+            currentDistance -= allNodesBackup[currentPath[i + 1]].value / DISCOUNT_FACTOR;
         }
 
         // Check if the current path is the shortest
@@ -101,7 +176,7 @@ void GraphSearch::SalesManSearch( int startNodeID, int goalNodeID, std::vector<i
     } while (std::next_permutation(victimsID.begin(), victimsID.end()));
 
     // Update the salesman_path with the shortest path found
-    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path: %F", minDistance);
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path given bonus by value: %F", minDistance);
     
 
     double total_distance = 0.0;
@@ -113,11 +188,11 @@ void GraphSearch::SalesManSearch( int startNodeID, int goalNodeID, std::vector<i
     		salesman_path.pop_back(); //remove the last one
         
     }
-    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path (second test): %F", total_distance);
+    RCLCPP_INFO(this->get_logger(), "-->> LENGTH of total path (without bonus): %F", total_distance);
    
 
 }
-
+*/
 double GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
 {
 

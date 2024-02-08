@@ -86,7 +86,11 @@ private:
     std::vector<graph_search::Node> salesman_path;
 
     void roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg);
-    void SalesManSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID);
+    void generateCombinations(std::vector<int>& combination, int offset, int k,
+                          std::vector<int>& victimsID, double DISCOUNT_FACTOR,
+                          double& minDistance, std::vector<int>& minPath,
+                          int startNodeID, int goalNodeID);
+    void SalesManBruteSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID);
     double AStarSearch(int startNodeID, int goalNodeID);
     double reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
     void visualizePath();
