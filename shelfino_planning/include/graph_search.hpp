@@ -12,6 +12,7 @@
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/buffer.h"
 
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -71,6 +72,7 @@ public:
         marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("markers/graph_search", qos);
         publisher_graph_path_ = this->create_publisher<planning_msgs::msg::GraphPath>("/graph_path", qos);
     }
+    
 
 private:
 
@@ -89,10 +91,11 @@ private:
     void generateCombinations(std::vector<int>& combination, int offset, int k,
                           std::vector<int>& victimsID, double DISCOUNT_FACTOR,
                           double& minDistance, std::vector<int>& minPath,
-                          int startNodeID, int goalNodeID);
-    void SalesManBruteSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID);
+                          int startNodeID, int goalNodeID, double maxDistance);
+    void SalesManBruteSearch( int startNodeID, int goalNodeID, std::vector<int> victimsID, double maxDistance);
     double AStarSearch(int startNodeID, int goalNodeID);
     double reconstructPath(const graph_search::Node& current, const graph_search::Node& start);
+    void SalesManHeuristicSearch(int startNodeID, int goalNodeID, std::vector<int> victimsID, double maxTotalDistance);
     void visualizePath();
     void publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmapInfo);
 };

@@ -299,7 +299,8 @@ std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg
 			} else if (m.type == "BOX") {
 				ty = BOX;
 			}
-			obstacle o = {m.radius, m.x, m.y, m.dx, m.dy, ty};
+			//doubling to be further away
+			obstacle o = {m.radius*2, m.x, m.y, m.dx, m.dy, ty};
 			obs.push_back(o);
 		}
 		return obs;

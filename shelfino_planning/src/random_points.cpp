@@ -86,6 +86,8 @@ class RandomPoints : public rclcpp::Node
 		std::uniform_real_distribution<> y_dis(-DY, DY);
 
 		std::vector<obstacle> possible_waypoints;
+		//Adding some spacing
+		
 		possible_waypoints.push_back(victim(initialPose.pose.pose.position.x, initialPose.pose.pose.position.y, radius_of_distance));
 
 		//First add the victims we already have
