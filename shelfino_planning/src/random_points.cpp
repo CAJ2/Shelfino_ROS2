@@ -131,7 +131,6 @@ class RandomPoints : public rclcpp::Node
 			}
 */
 		}
-		//possible_waypoints.clear();
 
 		planning_msgs::msg::Roadmap roadmap = createGraphEdges(possible_waypoints, obstacles);
 

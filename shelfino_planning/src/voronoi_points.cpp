@@ -123,6 +123,9 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
 {
     std::string map_name = "hexagon";
 
+    double DX = 9.0; // made a bit smaller than 10 so it is not too close to the edges
+	double DY = 9.0;
+
     std::vector<obstacle> possible_waypoints;
 
     possible_waypoints.push_back(victim(initialPose.pose.pose.position.x, initialPose.pose.pose.position.y, 0.05));
@@ -155,14 +158,13 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
         new_element.y = edge->pos[0].y;
         new_element.radius = 0.05;
 
-        if (valid_position(map_name, 9, 9, new_element, {possible_waypoints, obstacles, gates})) 
+        if (valid_position(map_name, DX, DY, new_element, {possible_waypoints, obstacles, gates})) 
         {
             possible_waypoints.push_back(new_element); //for the internal list of waypoints
         }
 
         edge = jcv_diagram_get_next_edge(edge);
     }
-    possible_waypoints.clear();
     planning_msgs::msg::Roadmap roadmap = createGraphEdges(possible_waypoints, obstacles);
 		
 	for(auto edge : roadmap.edges){
