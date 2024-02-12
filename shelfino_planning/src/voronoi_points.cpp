@@ -174,6 +174,8 @@ void VoronoiPoints::generate(const std::shared_ptr<planning_msgs::srv::GenRoadma
 		response->roadmap.nodes.push_back(node);
 	}
 
+    jcv_diagram_free(&diagram);
+
     RCLCPP_INFO(this->get_logger(), "\n\n !!!!! Points spawned !!!!!!! \n\n");
 }
 
