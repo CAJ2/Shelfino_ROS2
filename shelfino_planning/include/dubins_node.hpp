@@ -37,7 +37,7 @@
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "graph_node.hpp"
-#include "graph.hpp"
+#include "utils.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -84,7 +84,7 @@ private:
     rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;
     rclcpp::Publisher<planning_msgs::msg::GraphPath>::SharedPtr publisher_dubins_path_;
 
-    std::vector<graph::Edge> obstacleEdges;
+    std::vector<dubins::Edge> obstacleEdges;
     planning_msgs::msg::RoadmapInfo roadmapInfo;
     std::vector<geometry_msgs::msg::Pose> dubinsPathPoints;
 

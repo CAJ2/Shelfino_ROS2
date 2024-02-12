@@ -2,15 +2,11 @@
 
 #include <cmath>
 
+#include "planning_msgs/msg/point2_d.hpp"
+
+
 namespace dubins
 {
-
-    /**
-     * @brief Implementation of function sinc(t)
-     * 
-     * @param t TODO
-     * @return double 1 for t==0, and sin(t)/t otherwise
-     */
     double sinc(double t)
     {
         double s;
@@ -25,12 +21,8 @@ namespace dubins
         return s;
     }
 
-    /**
-     * @brief Normalize an angle (in range [0,2*pi))
-     * 
-     * @param ang Angle to normalize
-     * @return double Normalized angle
-     */
+
+    // Normalize an angle (in range [0,2*pi))
     double mod2pi(double ang)
     {
         double out = ang;
@@ -45,12 +37,7 @@ namespace dubins
         return out;
     }
 
-    /**
-     * @brief Normalize an angular difference (range (-pi, pi])
-     * 
-     * @param ang Angular difference to normalize
-     * @return double Normalized angular difference
-     */
+    // Normalize an angular difference (range (-pi, pi])
     double rangeSymm(double ang)
     {
         double out = ang;
@@ -65,27 +52,22 @@ namespace dubins
         return out;
     }
 
-    /**
-     * @brief Calculates the cross product between two Points
-     * 
-     * @param a First input point
-     * @param b Second input point
-     * @return double Cross product between provided points
-     */
     double crossProduct(DubinsPoint a, DubinsPoint b)
     {
         return a.x * b.y - a.y * b.x;
     }
 
-    /**
-     * @brief Calculates the dot product between two Points
-     * 
-     * @param a First input point
-     * @param b Second input point
-     * @return double Dot product between provided points
-     */
     double dot2D(DubinsPoint a, DubinsPoint b)
     {
         return a.x * b.x + a.y * b.y;
+    }
+
+    int getOrientation(planning_msgs::msg::Point2D p, planning_msgs::msg::Point2D q, planning_msgs::msg::Point2D r)
+    {
+        double val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+
+        if (val == 0)
+            return 0; // collinear
+        return (val < 0) ? 1 : -1; // clock or counterclock wise
     }
 }

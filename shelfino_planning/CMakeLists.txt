@@ -67,7 +67,7 @@ ament_target_dependencies(
 
 # build nodes
 foreach(NODE ${NODES})
-  add_executable(${NODE} src/${NODE}.cpp src/utilities.cpp src/utils.cpp src/graph.cpp src/dubins.cpp)
+  add_executable(${NODE} src/${NODE}.cpp src/utilities.cpp src/utils.cpp src/dubins.cpp)
 
   target_include_directories(${NODE} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

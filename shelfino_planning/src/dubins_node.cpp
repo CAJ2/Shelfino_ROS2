@@ -27,9 +27,14 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
             polygon = approximateCircle(obs.x, obs.y, obs.radius, 20);
             for(int i; i < polygon.points.size() - 1; i++)
             {
-                graph::Point point1{obs.polygon.points[i].x, obs.polygon.points[i].y};
-                graph::Point point2{obs.polygon.points[i+1].x, obs.polygon.points[i+1].y};
-                graph::Edge edge{point1, point2};
+                planning_msgs::msg::Point2D point1;
+                point1.x = obs.polygon.points[i].x; 
+                point1.y = obs.polygon.points[i].y;
+
+                planning_msgs::msg::Point2D point2;
+                point1.x = obs.polygon.points[i+1].x; 
+                point1.y = obs.polygon.points[i+1].y;
+                dubins::Edge edge{point1, point2};
                 obstacleEdges.push_back(edge);
             }
         } else if("BOX" == obs.type)
@@ -42,14 +47,22 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
             double y3 = obs.y + obs.dy/2;
             double x4 = obs.x - obs.dx/2;
             double y4 = obs.y + obs.dy/2;
-            graph::Point point1{x1, y1};
-            graph::Point point2{x2, y2};
-            graph::Point point3{x3, y3};
-            graph::Point point4{x4, y4};
-            graph::Edge edge1{point1, point2};
-            graph::Edge edge2{point2, point3};
-            graph::Edge edge3{point3, point4};
-            graph::Edge edge4{point4, point1};
+            planning_msgs::msg::Point2D point1;
+            point1.x = x1;
+            point1.y = y1;
+            planning_msgs::msg::Point2D point2;
+            point2.x = x2;
+            point2.y = y2;
+            planning_msgs::msg::Point2D point3;
+            point3.x = x3;
+            point3.y = y3;
+            planning_msgs::msg::Point2D point4;
+            point4.x = x4;
+            point4.y = y4;
+            dubins::Edge edge1{point1, point2};
+            dubins::Edge edge2{point2, point3};
+            dubins::Edge edge3{point3, point4};
+            dubins::Edge edge4{point4, point1};
             obstacleEdges.push_back(edge1);
             obstacleEdges.push_back(edge2);
             obstacleEdges.push_back(edge3);
