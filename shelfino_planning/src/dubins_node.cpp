@@ -24,7 +24,7 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
         if("CYLINDER" == obs.type)
         {
             geometry_msgs::msg::Polygon polygon;
-            polygon = approximateCircle(obs.x, obs.y, obs.radius, 20);
+            polygon = approximateCircle(obs.x, obs.y, obs.radius + collisionThreshold, polygonPoints);
             for(int i; i < polygon.points.size() - 1; i++)
             {
                 planning_msgs::msg::Point2D point1;
@@ -39,14 +39,14 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
             }
         } else if("BOX" == obs.type)
         {
-            double x1 = obs.x - obs.dx/2;
-            double y1 = obs.y - obs.dy/2;
-            double x2 = obs.x + obs.dx/2;
-            double y2 = obs.y - obs.dy/2;
-            double x3 = obs.x + obs.dx/2;
-            double y3 = obs.y + obs.dy/2;
-            double x4 = obs.x - obs.dx/2;
-            double y4 = obs.y + obs.dy/2;
+            double x1 = obs.x - obs.dx/2 - collisionThreshold/2.0;
+            double y1 = obs.y - obs.dy/2 - collisionThreshold/2.0;
+            double x2 = obs.x + obs.dx/2 + collisionThreshold/2.0;
+            double y2 = obs.y - obs.dy/2 - collisionThreshold/2.0;
+            double x3 = obs.x + obs.dx/2 + collisionThreshold/2.0;
+            double y3 = obs.y + obs.dy/2 + collisionThreshold/2.0;
+            double x4 = obs.x - obs.dx/2 - collisionThreshold/2.0;
+            double y4 = obs.y + obs.dy/2 + collisionThreshold/2.0;
             planning_msgs::msg::Point2D point1;
             point1.x = x1;
             point1.y = y1;

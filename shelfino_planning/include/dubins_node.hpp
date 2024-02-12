@@ -79,6 +79,9 @@ public:
 
 private:
 
+    double collisionThreshold = 0.1;
+    int polygonPoints = 20;
+
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr marker_pub_;
     rclcpp::Subscription<planning_msgs::msg::GraphPath>::SharedPtr graph_path_subscription_;
     rclcpp::Subscription<planning_msgs::msg::RoadmapInfo>::SharedPtr roadmap_subscription_;
