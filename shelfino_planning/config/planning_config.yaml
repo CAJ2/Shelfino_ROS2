@@ -1,0 +1,15 @@
+roadmap_harness:
+  roadmap_services:
+    - random_points
+    - voronoi_points
+  publish_roadmap_service: voronoi_points
+  random_points:
+    color:
+      r: 0.0
+      g: 0.8
+      b: 1.0
+  voronoi_points:
+    color:
+      r: 0.8
+      g: 0.5
+      b: 1.0

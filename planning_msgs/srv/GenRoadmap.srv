@@ -1,0 +1,8 @@
+obstacles_msgs/ObstacleArrayMsg gate
+obstacles_msgs/ObstacleArrayMsg obstacles
+obstacles_msgs/ObstacleArrayMsg victims
+geometry_msgs/PoseWithCovarianceStamped robot_pose
+geometry_msgs/Polygon borders
+nav_msgs/OccupancyGrid occupancy_grid
+---
+Roadmap roadmap

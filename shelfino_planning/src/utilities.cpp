@@ -1,4 +1,10 @@
-#include "map_pkg/utilities.hpp"
+#include "utilities.hpp"
+#include "planning_msgs/srv/gen_roadmap.hpp"
+
+#include <vector>
+
+#include "delaunator.hpp"
+
 
 h2d::CPolyline obs_to_cpoly (const obstacle& obs){
   h2d::CPolyline poly;
@@ -94,6 +100,53 @@ bool overlaps(obstacle obs1, std::vector<obstacle> obstacles){
   }
   return false;
 }
+
+
+/**
+ * @brief Function that checks if a line segment overlaps with an obstacle
+ * 
+ * @param x1, y1 The starting point of the line segment
+ * @param x2, y2 The ending point of the line segment
+ * @param obs The obstacle to check against
+ * @return true If the line segment overlaps with the obstacle
+ * @return false If the line segment does not overlap with the obstacle
+ */
+bool overlaps(double x1, double y1, double x2, double y2, const obstacle& obs) {
+ 
+  
+  if (obs.type == obstacle_type::CYLINDER){
+   	h2d::Segment line_segment(h2d::Point2d(x1, y1), h2d::Point2d(x2, y2));
+  	h2d::Circle obs_geom(obs_to_circle(obs));
+  	return obs_geom.intersects(line_segment).size() > 0;
+  	}
+  else if (obs.type == obstacle_type::BOX){
+   	h2d::Segment line_segment(h2d::Point2d(x1, y1), h2d::Point2d(x2, y2));
+  	h2d::CPolyline obs_geom(obs_to_cpoly(obs));
+  	return obs_geom.intersects(line_segment).size() > 0;
+  	}
+  else return false;
+
+
+}
+
+/**
+ * @brief Function that checks if a line crosses any obstacle in a vector
+ * 
+ * @param x1, y1 The starting point of the line segment
+ * @param x2, y2 The ending point of the line segment
+ * @param obstacles The vector of obstacles to check against
+ * @return true If the line crosses any obstacle in the vector
+ * @return false If the line does not cross any obstacle in the vector
+ */
+bool line_overlap(double x1, double y1, double x2, double y2, const std::vector<obstacle>& obstacles) {
+  for (const auto& obs : obstacles) {
+    if (overlaps(x1, y1, x2, y2, obs)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 
 
 /**
@@ -236,3 +289,80 @@ bool valid_position(
   }
   return res;
 }
+
+std::vector<obstacle> msg_to_obstacles(obstacles_msgs::msg::ObstacleArrayMsg msg) {
+		std::vector<obstacle> obs;
+		for (auto m : msg.obstacles) {
+			obstacle_type ty;
+			if (m.type == "CYLINDER") {
+				ty = CYLINDER;
+			} else if (m.type == "BOX") {
+				ty = BOX;
+			}
+			//doubling to be further away
+			obstacle o = {m.radius*1.2, m.x, m.y, m.dx, m.dy, ty};
+			obs.push_back(o);
+		}
+		return obs;
+	}
+
+    planning_msgs::msg::Roadmap createGraphEdges(const std::vector<obstacle> &possible_waypoints, const std::vector<obstacle> &obstacles)
+    {
+        planning_msgs::msg::Roadmap roadmap;
+
+        std::vector<double> coords;
+
+        for (const auto& waypoint : possible_waypoints)
+        {
+          geometry_msgs::msg::Point point;
+
+          point.x = waypoint.x;
+          point.y = waypoint.y;
+          point.z = 0.0;
+          roadmap.nodes.push_back(point);
+          coords.push_back(waypoint.x);
+          coords.push_back(waypoint.y);
+        }
+
+        delaunator::Delaunator delaunator(coords);
+        const auto &triangles = delaunator.triangles;
+        
+        // Creating empty first
+        for (size_t i = 0; i < roadmap.nodes.size(); i++)
+        {
+          planning_msgs::msg::RoadmapEdge empty_edge;
+          roadmap.edges.push_back(empty_edge);
+        }
+
+        for (size_t i = 0; i < triangles.size(); i += 3)
+	      {
+            for (size_t j = 0; j < 3; ++j)
+            {
+              //check if it crosses an obstacle
+              int id_starting = triangles[i + j];
+              int id_ending = triangles[i + (j + 1) % 3];
+              float x1 = roadmap.nodes[id_starting].x;
+              float y1 = roadmap.nodes[id_starting].y;
+              float x2 = roadmap.nodes[id_ending].x;
+              float y2 = roadmap.nodes[id_ending].y;
+              
+              if (!line_overlap(x1, y1, x2, y2, {obstacles})) //|| (x1 == 0.0 && y1 == 0.0) || (x2 == 0.0 && y2 == 0.0))
+              {
+                  // Check if the edge doesn't already exist
+                  if (std::find(roadmap.edges[id_starting].node_ids.begin(),
+                        roadmap.edges[id_starting].node_ids.end(), id_ending) ==
+                      roadmap.edges[id_starting].node_ids.end())
+                  {
+                      // Add connection from starting node to ending node
+                      roadmap.edges[id_starting].node_ids.push_back(id_ending);
+
+                      // Add connection from ending node to starting node
+                      roadmap.edges[id_ending].node_ids.push_back(id_starting);
+                  }
+              }
+            }
+
+		    }
+
+        return roadmap;
+    }
