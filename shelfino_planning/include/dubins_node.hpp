@@ -79,7 +79,7 @@ public:
 
 private:
 
-    double collisionThreshold = 0.1;
+    double collisionThreshold = 0.2;
     int polygonPoints = 20;
 
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr marker_pub_;
