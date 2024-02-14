@@ -74,6 +74,7 @@ void ExecutePath::runPath()
                 return;
             }
             this->start_time = this->now();
+            RCLCPP_INFO(this->get_logger(), "Planning times: Roadmap: %ld, Search: %ld, Dubins: %ld", current_path.roadmap_duration, current_path.path_planning_duration, current_path.dubins_duration);
         }
     }
 
@@ -169,12 +170,12 @@ void ExecutePath::goalResponseCallback(const GoalHandleFollowPath::SharedPtr& ms
 
 void ExecutePath::feedbackCallback(const GoalHandleFollowPath::SharedPtr& msg, const std::shared_ptr<const FollowPath::Feedback> feedback)
 {
-    std::stringstream ss;
-    ss << "Feedback received with " << feedback->distance_to_goal << " distance to goal";
-    RCLCPP_INFO(this->get_logger(), ss.str().c_str());
     this->feedback_timeout = this->get_clock()->now();
     if (feedback->distance_to_goal < 0.02)
     {
+        std::stringstream ss;
+        ss << "Feedback received with " << feedback->distance_to_goal << " distance to goal";
+        RCLCPP_INFO(this->get_logger(), ss.str().c_str());
         this->action_follow_path->async_cancel_all_goals([this](const std::shared_ptr<action_msgs::srv::CancelGoal_Response> goal_handle) {
             this->current_path_running = false;
             this->runNextPathGoal();

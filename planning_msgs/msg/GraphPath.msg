@@ -12,6 +12,8 @@ string path_planner
 # Path planning time in milliseconds
 uint64 path_planning_duration
 
+uint64 dubins_duration
+
 # The starting position of the robot
 geometry_msgs/PoseWithCovarianceStamped robot_pose
 

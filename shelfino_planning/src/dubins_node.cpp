@@ -28,11 +28,11 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
             for(int i; i < polygon.points.size() - 1; i++)
             {
                 planning_msgs::msg::Point2D point1;
-                point1.x = obs.polygon.points[i].x; 
+                point1.x = obs.polygon.points[i].x;
                 point1.y = obs.polygon.points[i].y;
 
                 planning_msgs::msg::Point2D point2;
-                point1.x = obs.polygon.points[i+1].x; 
+                point1.x = obs.polygon.points[i+1].x;
                 point1.y = obs.polygon.points[i+1].y;
                 dubins::Edge edge{point1, point2};
                 obstacleEdges.push_back(edge);
@@ -75,7 +75,7 @@ void DubinsPathGenerator::roadmapCallback(const planning_msgs::msg::RoadmapInfo:
 
 void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath::SharedPtr msg)
 {
-
+    auto start_time = std::chrono::system_clock::now();
     planning_msgs::msg::GraphPath graphPath = *msg;
 
     dubins::DubinsPoint** dubinsPoints = new dubins::DubinsPoint*[graphPath.graph_path_points.size()];
@@ -151,6 +151,8 @@ void DubinsPathGenerator::graphPathCallback(const planning_msgs::msg::GraphPath:
 
     visualizePath();
 
+    auto service_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - start_time);
+    graphPath.dubins_duration = service_duration.count();
     publishPath(graphPath);
 
     return;

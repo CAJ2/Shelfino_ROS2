@@ -120,7 +120,7 @@ public:
 
         auto result_cb = [this, publish_service, start_time](rclcpp::Client<planning_msgs::srv::GenRoadmap>::SharedFuture result)
         {
-            auto service_duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time);
+            auto service_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - start_time);
             auto response = result.get();
             RCLCPP_INFO(this->get_logger(), "Service %s (took %ld ms) returned roadmap with %ld nodes",
                         publish_service.c_str(), service_duration.count(), response->roadmap.nodes.size());

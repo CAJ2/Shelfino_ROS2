@@ -379,8 +379,8 @@ void ObstaclesPublisher::spawn_and_publish_obstacles(std::vector<obstacle>& obst
       mark.scale.y = o.dy;
     } else {
       mark.type = visualization_msgs::msg::Marker::CYLINDER;
-      mark.scale.x = o.radius;
-      mark.scale.y = o.radius;
+      mark.scale.x = 2*o.radius;
+      mark.scale.y = 2*o.radius;
     }
     mark.pose = pose;
     mark.scale.z = 1.0;

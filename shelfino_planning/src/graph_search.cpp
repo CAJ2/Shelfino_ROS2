@@ -4,12 +4,13 @@
 void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedPtr msg)
 {
     RCLCPP_INFO(this->get_logger(), "/*/*/***/*-----------------Roadmap received-----------------");
-    
+    auto start_time = std::chrono::system_clock::now();
+
     planning_msgs::msg::RoadmapInfo roadmapInfo = *msg;
     int startNodeID;
     int goalNodeID;
     std::vector<int> victimsID;
-    
+
     for(int i = 0; i < (int)roadmapInfo.roadmap.edges.size(); i++)
     {
         const auto& nodes = roadmapInfo.roadmap.edges[i].node_ids;
@@ -22,7 +23,7 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
             node.neighbors.push_back(n);
         }
 
-        
+
 
         if(node.position.x == roadmapInfo.gate.position.x && node.position.y == roadmapInfo.gate.position.y)
         {
@@ -39,12 +40,12 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
         		node.value = victim.radius;
         	}
         }
-        
+
         allNodesBackup.push_back(node);
 
     }
-    
-    
+
+
     for(int v : victimsID)
     {
         RCLCPP_INFO(this->get_logger(), "-> VICTIM ID: %d with value: %.2f", v, allNodesBackup[v].value);
@@ -59,18 +60,19 @@ void GraphSearch::roadmapCallback(const planning_msgs::msg::RoadmapInfo::SharedP
     //Toggle here the algorithm chosen
     SalesManBruteSearch(startNodeID, goalNodeID, victimsID, 60.0);
     //SalesManHeuristicSearch(startNodeID, goalNodeID, victimsID, 60.0);
-    
+
     //printing the path
     for(auto node : salesman_path)
     {
         RCLCPP_INFO(this->get_logger(), "--- FINAL ids of path: %d", node.nodeID);
     }
-    
-    
-    
+
+
+
     visualizePath();
 
-    publishGraphPath(roadmapInfo);
+    auto service_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - start_time);
+    publishGraphPath(roadmapInfo, service_duration.count());
 
     return;
 }
@@ -154,13 +156,13 @@ double GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
 {
 
     path.clear();
-    openSet.clear(); 
-    closedSet.clear(); 
+    openSet.clear();
+    closedSet.clear();
     allNodes.clear();
-    //there is a better way 
-    for (uint i=0; i<allNodesBackup.size(); i++)  
-        allNodes.push_back(allNodesBackup[i]);  
-    
+    //there is a better way
+    for (uint i=0; i<allNodesBackup.size(); i++)
+        allNodes.push_back(allNodesBackup[i]);
+
     //RCLCPP_INFO(this->get_logger(), "Starting A* search");
 
     graph_search::Node startNode = allNodes[startNodeID];
@@ -185,7 +187,7 @@ double GraphSearch::AStarSearch(int startNodeID, int goalNodeID)
         {
             //RCLCPP_INFO(this->get_logger(), "Goal reached");
             return reconstructPath(currentNode, startNode);
-            
+
         }
 
         closedSet.push_back(currentNode);
@@ -234,7 +236,7 @@ double GraphSearch::reconstructPath(const graph_search::Node& goal, const graph_
     graph_search::Node node = goal;
 
     double track_distance=0.0;
-    while(node.nodeID != start.nodeID) 
+    while(node.nodeID != start.nodeID)
     {
         track_distance += graph_search::distance(node.position, allNodes[node.parentID].position);
         path.push_back(node);
@@ -244,13 +246,13 @@ double GraphSearch::reconstructPath(const graph_search::Node& goal, const graph_
     path.push_back(start);
 
     std::reverse(path.begin(), path.end());
-    
+
     return track_distance;
 }
 
 
 
-   
+
 void GraphSearch::SalesManHeuristicSearch(int startNodeID, int goalNodeID, std::vector<int> victimsID, double maxTotalDistance) {
     double DISCOUNT_FACTOR = 20.0;
 
@@ -262,7 +264,7 @@ void GraphSearch::SalesManHeuristicSearch(int startNodeID, int goalNodeID, std::
         return allNodesBackup[a].value > allNodesBackup[b].value;
     });
     orderedPath.push_back(startNodeID);
-    
+
     // Start from the initial node
     int currentNodeID = startNodeID;
     double currentDistance = 0.0;
@@ -276,10 +278,10 @@ void GraphSearch::SalesManHeuristicSearch(int startNodeID, int goalNodeID, std::
             double distance = AStarSearch(currentNodeID, neighborID);
             double distanceToGate = AStarSearch(currentNodeID, goalNodeID);
             double totalCost = distance - allNodesBackup[neighborID].value / DISCOUNT_FACTOR;
-	    
+
             currentDistance+= distance;
 	    if ((currentDistance + distanceToGate) >= maxTotalDistance) break;
-	    
+
             if (totalCost < minDistance ) {
                 minDistance = totalCost;
                 nextNodeID = neighborID;
@@ -370,7 +372,7 @@ void GraphSearch::visualizePath()
     RCLCPP_INFO(this->get_logger(), "Path published");
 }
 
-void GraphSearch::publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmapInfo)
+void GraphSearch::publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmapInfo, int duration)
 {
     RCLCPP_INFO(this->get_logger(), "Publishing graph path");
 
@@ -380,7 +382,7 @@ void GraphSearch::publishGraphPath(const planning_msgs::msg::RoadmapInfo roadmap
     graphPath.generator = roadmapInfo.generator;
     graphPath.roadmap_duration = roadmapInfo.roadmap_duration;
     graphPath.path_planner = "graph_search";
-    graphPath.path_planning_duration = 0;
+    graphPath.path_planning_duration = duration;
     graphPath.robot_pose = roadmapInfo.robot_pose;
     graphPath.gate = roadmapInfo.gate;
     graphPath.obstacles = roadmapInfo.obstacles;
